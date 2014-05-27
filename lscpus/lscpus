@@ -1,0 +1,254 @@
+#!/usr/bin/env python
+
+import sys, os, copy
+from subprocess import call, Popen, PIPE
+from optparse import OptionParser
+
+class PE(object):
+    def __init__(self, fields):
+        self.fields = fields
+        self.thread = None
+        self.isHidden = False
+
+    def __str__(self):
+        extra = ''
+        if self.thread:
+            extra = ' ' + str(self.thread)
+
+        return ' '.join(self.fields) + extra
+
+    def __repr__(self):
+        return self.__str__()
+
+    def id(self): return int(self.fields[0])
+    def state(self): return self.fields[1]
+    def rc(self): return self.fields[2]
+    def healthy(self): return self.fields[3]
+    def host(self): return self.fields[4]
+    def pid(self): return int(self.fields[5])
+    def jid(self): return int(self.fields[6])
+    def jname(self): return self.fields[7]
+    def operators(self): return self.fields[8]
+
+    def cpu(self):
+        if self.thread:
+            return self.thread.cpu()
+        else:
+            return 0.0
+
+    def virt(self):
+        if self.thread:
+            return self.thread.virtual()
+        else:
+            return ''
+
+    def shr(self):
+        if self.thread:
+            return self.thread.shared()
+        else:
+            return ''
+
+    def res(self):
+        if self.thread:
+            return self.thread.resident()
+        else:
+            return ''
+
+    def attach(self, thread):
+        self.thread = thread
+
+    # calling this a "pid" is a bit of a lie, since for threaded-port threads it
+    # will actually be a tid, but top itself lies this way, too
+    def set_pid(self, pid):
+        self.fields[5] = str(pid)
+
+    # When deep threading is turned on, the tid that is the thread-group leader 
+    # is unlikely to be doing much work. If that's the case, then we will want to 
+    # hide it from the normal display. However, if none of that process's threads are 
+    # doing any work, then we still want to display 0.0% for the thread-group leader.
+    def hide(self, value):
+        self.isHidden = value
+
+    def hidden(self):
+        return self.isHidden
+
+    def pretty_print(self, sizes):
+        my_pretty = ''
+        for i, f in enumerate(self.fields):
+            my_pretty = my_pretty + f + ' ' * (sizes[i] - len(f) + 1)
+
+        if self.thread:
+            my_pretty = my_pretty + self.thread.pretty_print(sizes)
+
+        return my_pretty
+
+class Thread:
+    def __init__(self, fields):
+        self.fields = fields
+
+    def __str__(self):
+        return ' '.join(self.fields)
+
+    def __repr__(self):
+        return self.__str__
+
+    def tid(self): return int(self.fields[0])
+    def user(self): return self.fields[1]
+    def priority(self): return self.fields[2]
+    def nice(self): return self.fields[3]
+    def virtual(self): return self.fields[4]
+    def resident(self): return self.fields[5]
+    def shared(self): return self.fields[6]
+    def status(self): return self.fields[7]
+    def cpu(self): return float(self.fields[8])
+    def mem(self): return float(self.fields[9])
+    def time(self): return self.fields[10]
+    def command(self): return self.fields[11]
+
+    def pretty_print(self, sizes):
+         # only doing a subset, so can't generalize into a loop
+         return (str(self.cpu()) + ' ' * (sizes[9] - len(str(self.cpu())) + 1) +
+                 self.virtual() + ' ' * (sizes[10] - len(self.virtual()) + 1) +
+                 self.resident() + ' ' * (sizes[11] - len(self.resident()) + 1) +
+                 self.shared() + ' ' * (sizes[12] - len(self.shared()) + 1))
+
+class MaxSize:
+    def __init__(self, defaults):
+        self.sizes = {}
+        for i, d in enumerate(defaults):
+            self.sizes[i] = len(d) 
+
+    def __getitem__(self, key):
+        return self.sizes[key]
+
+    def add(self, pe):
+        def new_max(old, new):
+            if old < len(new):
+                return len(new)
+            else:
+                return old
+
+        for i, f in enumerate(pe.fields):
+            self.sizes[i] = new_max(self.sizes[i], f)
+
+        if pe.thread:
+            self.sizes[9] = new_max(self.sizes[9], str(pe.thread.cpu()))
+            self.sizes[10] = new_max(self.sizes[10], pe.thread.virtual())
+            self.sizes[11] = new_max(self.sizes[11], pe.thread.resident())
+            self.sizes[12] = new_max(self.sizes[12], pe.thread.shared())
+
+def exec_exit(seq):
+    p = Popen(seq, stdout=PIPE, stderr=PIPE)
+    stdout, stderr = p.communicate()
+    if p.returncode != 0:
+        print seq[0] + ': ' + stderr.rstrip()
+        print "lscpus: '" + ' '.join(seq) + "' failed."
+        sys.exit()
+    return stdout
+
+def exec_noexit(seq):
+    p = Popen(seq, stdout=PIPE, stderr=PIPE)
+    stdout, _ = p.communicate()
+    return stdout, p.returncode
+
+def main():
+    parser = OptionParser()
+    parser.add_option('-i', '--instance', dest='instance',
+                      help='streams instance name', metavar='INST')
+    parser.add_option('-s', '--sortby', dest='key',
+                      help='field to sort by', metavar='KEY')
+    parser.add_option('-t', '--threading', dest='threading',
+                      help='turn on threading', action='store_true')
+    (options, args) = parser.parse_args()
+
+    st = [os.environ['STREAMS_INSTALL'] + '/bin/streamtool', 'lspes']
+    if options.instance:
+        st += ['-i', options.instance]
+
+    lspes = exec_exit(st)
+
+    pes = {}
+    hosts = []
+    for line in lspes.split('\n')[2:]:
+        if line:
+            pe = PE(line.split())
+            pes[pe.pid()] = pe
+            if pe.host() not in hosts:
+                hosts.append(pe.host())
+
+    for host in hosts:
+        top_cmd = ['top', '-b', '-n', '1']
+        if options.threading:
+            top_cmd += ['-H']
+        top, err = exec_noexit(['ssh', host] + top_cmd + ['|', 'grep', 'streams-pec'])
+        if err:
+            print 'No running PEs on ' + host
+            continue
+
+        # maps the thread ID (tid) to the thread-group ID (tgid), which is the tid of the thread-group 
+        # leader, which is also the process ID (pid) of the overall process
+        tid_to_tgid = {}
+
+        if options.threading:
+            for pe in pes.itervalues():
+                if host == pe.host():
+                    tasks, err = exec_noexit(['ssh', host, 'ls', '/proc/' + str(pe.pid()) + '/task/'])
+                    if err:
+                        print 'Problem accessing task information for pe ' + str(pe.pid()) + ' on host ' + host
+                        continue
+                    for task in tasks.rstrip().split('\n'):
+                        tid_to_tgid[int(task)] = pe.pid()
+
+        lines = top.split('\n')
+        for line in lines:
+            if line:
+                thread = Thread(line.split())
+
+                # it's possible the user has multiple instances running, in which case we will have
+                # streams-pec processes that lspes did not report, so we only attach this thread if its
+                # pid matches a pid in our PEs
+                if thread.tid() in pes:
+                    pes[thread.tid()].attach(thread)
+
+                # if deep threading is on, only record it if it's actually doing work
+                elif options.threading and thread.tid() in tid_to_tgid and thread.cpu() > 0.0:
+                    original_pe = pes[tid_to_tgid[thread.tid()]]
+
+                    # this is the tid for the thread-group leader; if it's not doing any work
+                    # (which is likely), hide it from the final display
+                    if not original_pe.cpu() > 0.0:
+                        original_pe.hide(True)
+
+                    pe = copy.deepcopy(original_pe)
+                    pe.hide(False)
+                    pe.attach(thread)
+                    pe.set_pid(thread.tid())
+                    pes[thread.tid()] = pe
+
+    header = ['ID', 'STATE', 'RC', 'HEALTHY', 'HOST', 'PID', 'JID', 'JOB', 'PES', 'CPU', 'VIRT', 'RES', 'SHR']
+    sizes = MaxSize(header)
+    for pe in pes.itervalues():
+        sizes.add(pe)
+
+    sortby = lambda x: x.cpu()
+    orientation = True
+    if options.key:
+        k = str.lower(options.key)
+        lowhead = [h.lower() for h in header]
+        if k not in lowhead:
+            print k + ' is not a valid sortby option; valid options are: \n\t' + ', '.join(lowhead)
+            sys.exit()
+        else:
+            sortby = lambda x: x.__getattribute__(k)()
+
+        if k in ['id', 'healthy', 'pid', 'jid', 'operators', 'host']:
+            orientation = False
+
+    print ''.join([h + ' ' * (sizes[i] - len(h) + 1) for i, h in enumerate(header)])
+    for pe in sorted(pes.itervalues(), key=sortby, reverse=orientation):
+        if not pe.hidden():
+            print pe.pretty_print(sizes)
+
+if __name__ == "__main__":
+    main()
+
