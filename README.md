@@ -1,6 +1,7 @@
 streamsx.utility
 ================
 
-Contains utilities for InfoSphere Streams.  
+Utilities for InfoSphere Streams. Each directory is a distinct utility.
 
-Folders will be created for specific utilities.
+  * **lscpus**: displays CPU utilization for PEs in a Streams instance.
+
