@@ -23,11 +23,20 @@ public abstract class ExecBasedTask extends Task {
 	private String executablePath;
 	private final String executable;
 	private ExecTask exec;
+	private File dir;
 	
 	protected ExecBasedTask(String executable) {
 		this.executable = executable;
 	}
 	
+	public File getDir() {
+		return dir;
+	}
+
+	public void setDir(File dir) {
+		this.dir = dir;
+	}
+
 	@Override
 	public void init() {
 		
@@ -59,6 +68,7 @@ public abstract class ExecBasedTask extends Task {
 		
 		executeAdditionalTasks();
 		
+		exec.setDir(getDir());
 		exec.setTaskType(getTaskType());
 		exec.setTaskName(getTaskName());
 		

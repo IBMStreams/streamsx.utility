@@ -9,10 +9,6 @@
     classname="com.ibm.streamsx.ant.submitjob.SubmitjobTask"
     />
     <taskdef
-    name="maphostpooltags"
-    classname="com.ibm.streamsx.ant.adl.MapHostPoolTagTask"
-    />
-    <taskdef
     name="indextoolkit"
     classname="com.ibm.streamsx.ant.toolkit.IndexToolkitTask"
     />
