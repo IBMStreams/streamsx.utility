@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Example of using generating a single SPLDOC set from
+   a number of toolkits. In this case all the InfoSphere Streams
+   product toolkits, all toolkits under $HOME/toolkits and Vwap.
+ -->
+<project name="multi" default="doc">
+
+	<property environment="env"/>
+	<property name="streams.install" value="${env.STREAMS_INSTALL}"/>
+	<taskdef resource="com/ibm/ssb/ant/streams.xml"/>
+
+	<property name="vwap.toolkit"
+	   value="${streams.install}/samples/spl/application/Vwap"/>
+	
+    <target name="doc">
+	<spldoc compositeGraphs="yes"
+            title="Collection of Toolkits"
+            outputDirectory="${basedir}/doc">
+          <toolkit location="${user.home}/toolkits" />
+          <toolkit location="${streams.install}/toolkits"/>
+          <toolkit location="${vwap.toolkit}"/>
+        </spldoc>
+        
+    </target>
+	
+	<!-- Remove the output directory -->
+    <target name="clean">
+        <delete dir="${basedir}/doc"/>
+    </target>
+</project>
+

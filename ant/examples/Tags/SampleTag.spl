@@ -1,0 +1,32 @@
+/*
+** Licensed Materials - Property of IBM
+** Copyright IBM Corp. 2013
+** US Government Users Restricted Rights - Use, duplication or
+** disclosure restricted by GSA ADP Schedule Contract with
+** IBM Corp.
+*/
+
+composite SampleTag
+{
+	graph
+		stream<int32 a> B = FileSource()
+		{
+			param
+				file : "input.txt" ;
+			config
+				placement : host(SourcePool) ;
+		}
+
+		() as FSOUT = FileSink(B)
+		{
+			param
+				file : "output.txt" ;
+			config
+				placement : host(SinkPool) ;
+		}
+
+
+	config
+		hostPool : SourcePool = createPool({ tags = [ "source" ] }, Sys.Shared),
+			SinkPool = createPool({ tags = [ "sink" ] }, Sys.Shared) ;
+}

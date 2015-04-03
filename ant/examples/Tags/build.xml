@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="vwap" default="compile">
+
+	<property environment="env"/>
+	<property name="streams.install" value="${env.STREAMS_INSTALL}"/>
+	<taskdef resource="com/ibm/ssb/ant/streams.xml"/>
+
+	<property name="mainComposite" value="SampleTag"/>
+	
+	<!-- Compile the Vwap application , runs sc -->
+	<target name="compile">
+		<splcompile mainComposite="${mainComposite}" />
+	</target>
+        <target name="submit">
+         <maphostpooltags
+              source="${basedir}/output/SampleTag.adl"
+              target="${basedir}/output/SampleTagIngest.adl">
+            <tag old="source" new="ingest"/>
+            <tag old="sink" new="egress"/>
+         </maphostpooltags>
+
+          <submit>
+            <applications>
+              <fileset dir="${basedir}/output" includes="SampleTagIngest.adl"/>
+            </applications>
+          </submit>
+	</target>
+
+	<!-- Remove the output directory created by the SPL compile -->
+    <target name="clean">
+        <delete dir="${basedir}/output"/>
+    </target>
+</project>
+
