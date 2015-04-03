@@ -1,4 +1,4 @@
-package com.ibm.ssb.ant.spldoc;
+package com.ibm.streamsx.ant.spldoc;
 /*
 ** Licensed Materials - Property of IBM
 ** Copyright IBM Corp. 2013

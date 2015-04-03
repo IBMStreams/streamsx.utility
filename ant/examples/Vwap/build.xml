@@ -4,7 +4,7 @@
 
 	<property environment="env"/>
 	<property name="streams.install" value="${env.STREAMS_INSTALL}"/>
-	<taskdef resource="com/ibm/ssb/ant/streams.xml"/>
+	<taskdef resource="com/ibm/streamsx/ant/streams.xml"/>
 
 	<property name="vwap.toolkit"
 	   value="${streams.install}/samples/spl/application/Vwap"/>

@@ -18,7 +18,7 @@
 
     <target name="install" depends="jar">
     	<mkdir dir="${antlib}" />
-    	<copy file="${lib}/com.ibm.ssb.ant.jar" todir="${antlib}"/>
+    	<copy file="${lib}/com.ibm.streamsx.ant.jar" todir="${antlib}"/>
 	</target>
 
 	<target name="compile" depends="init">
@@ -27,11 +27,11 @@
 			<classpath>
 			</classpath>
 		</javac>
-    	        <copy file="${src}/com/ibm/ssb/ant/streams.xml"
-    	               todir="${bin}/com/ibm/ssb/ant"/>
+    	        <copy file="${src}/com/ibm/streamsx/ant/streams.xml"
+    	               todir="${bin}/com/ibm/streamsx/ant"/>
 	</target>
 
 	<target name="jar" depends="compile">
-		<jar destfile="${lib}/com.ibm.ssb.ant.jar" basedir="${bin}" />
+		<jar destfile="${lib}/com.ibm.streamsx.ant.jar" basedir="${bin}" />
 	</target>
 </project>

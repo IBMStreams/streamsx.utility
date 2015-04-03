@@ -1,4 +1,4 @@
-package com.ibm.ssb.ant.adl;
+package com.ibm.streamsx.ant.adl;
 /*
 ** Licensed Materials - Property of IBM
 ** Copyright IBM Corp. 2013

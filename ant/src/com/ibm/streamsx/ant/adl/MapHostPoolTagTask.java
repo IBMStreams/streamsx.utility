@@ -1,4 +1,4 @@
-package com.ibm.ssb.ant.adl;
+package com.ibm.streamsx.ant.adl;
 /*
 ** Licensed Materials - Property of IBM
 ** Copyright IBM Corp. 2013
@@ -15,6 +15,8 @@ import java.util.Map;
 
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.Task;
+
+import com.ibm.streamsx.ant.adl.ADL;
 
 public class MapHostPoolTagTask extends Task {
 	

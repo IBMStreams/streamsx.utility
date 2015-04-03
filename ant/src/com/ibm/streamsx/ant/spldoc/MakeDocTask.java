@@ -1,4 +1,4 @@
-package com.ibm.ssb.ant.spldoc;
+package com.ibm.streamsx.ant.spldoc;
 /*
 ** Licensed Materials - Property of IBM
 ** Copyright IBM Corp. 2013
@@ -30,7 +30,7 @@ import org.apache.tools.ant.util.FileUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import com.ibm.ssb.ant.ExecBasedTask;
+import com.ibm.streamsx.ant.ExecBasedTask;
 
 public class MakeDocTask extends ExecBasedTask {
 	

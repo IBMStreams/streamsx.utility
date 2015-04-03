@@ -1,4 +1,4 @@
-package com.ibm.ssb.ant.submitjob;
+package com.ibm.streamsx.ant.submitjob;
 /*
 ** Licensed Materials - Property of IBM
 ** Copyright IBM Corp. 2013
@@ -18,7 +18,7 @@ import org.apache.tools.ant.taskdefs.ExecTask;
 import org.apache.tools.ant.types.FileSet;
 import org.apache.tools.ant.types.Parameter;
 
-import com.ibm.ssb.ant.AbstractStreamtoolTask;
+import com.ibm.streamsx.ant.AbstractStreamtoolTask;
 
 public class SubmitjobTask extends AbstractStreamtoolTask {
     public SubmitjobTask() {

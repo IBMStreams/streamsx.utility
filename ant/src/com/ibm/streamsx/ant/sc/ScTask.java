@@ -1,4 +1,4 @@
-package com.ibm.ssb.ant.sc;
+package com.ibm.streamsx.ant.sc;
 /*
 ** Licensed Materials - Property of IBM
 ** Copyright IBM Corp. 2013
@@ -13,8 +13,8 @@ import java.util.List;
 
 import org.apache.tools.ant.taskdefs.ExecTask;
 
-import com.ibm.ssb.ant.ExecBasedTask;
-import com.ibm.ssb.ant.FileLocation;
+import com.ibm.streamsx.ant.ExecBasedTask;
+import com.ibm.streamsx.ant.FileLocation;
 
 public class ScTask extends ExecBasedTask {
 

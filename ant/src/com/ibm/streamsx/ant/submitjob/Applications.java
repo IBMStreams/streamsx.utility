@@ -1,4 +1,4 @@
-package com.ibm.ssb.ant.submitjob;
+package com.ibm.streamsx.ant.submitjob;
 /*
 ** Licensed Materials - Property of IBM
 ** Copyright IBM Corp. 2013

@@ -1,4 +1,4 @@
-package com.ibm.ssb.ant.toolkit;
+package com.ibm.streamsx.ant.toolkit;
 /*
 ** Licensed Materials - Property of IBM
 ** Copyright IBM Corp. 2013
@@ -11,7 +11,7 @@ import java.io.File;
 
 import org.apache.tools.ant.taskdefs.ExecTask;
 
-import com.ibm.ssb.ant.ExecBasedTask;
+import com.ibm.streamsx.ant.ExecBasedTask;
 
 public class IndexToolkitTask extends ExecBasedTask {
     public IndexToolkitTask() {
