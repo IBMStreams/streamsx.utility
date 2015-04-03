@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<antlib>
+   <taskdef
+    name="splcompile"
+    classname="com.ibm.streamsx.ant.sc.ScTask"
+    />
+    <taskdef
+    name="submit"
+    classname="com.ibm.streamsx.ant.submitjob.SubmitjobTask"
+    />
+    <taskdef
+    name="indextoolkit"
+    classname="com.ibm.streamsx.ant.toolkit.IndexToolkitTask"
+    />
+    <taskdef
+    name="spldoc"
+    classname="com.ibm.streamsx.ant.spldoc.MakeDocTask"
+    />
+</antlib>
