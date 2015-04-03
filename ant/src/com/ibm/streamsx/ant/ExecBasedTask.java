@@ -68,7 +68,8 @@ public abstract class ExecBasedTask extends Task {
 		
 		executeAdditionalTasks();
 		
-		exec.setDir(getDir());
+		if (getDir() != null)
+		    exec.setDir(getDir());
 		exec.setTaskType(getTaskType());
 		exec.setTaskName(getTaskName());
 		
