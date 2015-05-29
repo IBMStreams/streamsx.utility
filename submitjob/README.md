@@ -13,5 +13,5 @@ This script lets you do that.  You can do
 
 You can use additional streamtool arguments by putting them after the file name, eg:
 `submitjob.pl output/Main.sab iliad.txt -i instancename -d domainname`
-See the testStandalone.sh and testDistributed.sh for example uses.
+See the `testStandalone.sh` and `testDistributed.sh` for example uses.
 
