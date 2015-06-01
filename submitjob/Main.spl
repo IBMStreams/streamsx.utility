@@ -1,0 +1,15 @@
+
+composite Main {
+param
+    expression<int32> $year: (int32)getSubmissionTimeValue("year","0");
+    expression<rstring> $title: getSubmissionTimeValue("title","default");
+    expression<rstring> $author: getSubmissionTimeValue("author","default");
+graph
+
+    () as writer = Custom() {
+
+    logic onProcess: {
+         println("Book is "+$title+" from author "+$author+" from year "+(rstring)$year+" which is "+(rstring)(2015-$year)+" years ago");
+    }
+    }
+}

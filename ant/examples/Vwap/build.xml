@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Example of using tasks for the Vwap application -->
+<project name="vwap" default="compile">
+
+	<property environment="env"/>
+	<property name="streams.install" value="${env.STREAMS_INSTALL}"/>
+	<taskdef resource="com/ibm/streamsx/ant/streams.xml"/>
+
+	<property name="vwap.toolkit"
+	   value="${streams.install}/samples/spl/application/Vwap"/>
+	<property name="mainComposite" value="sample::Vwap"/>
+	
+	<!-- Index the Vwap , runs spl-make-toolkit -->
+	<target name ="index">
+		<indextoolkit location="${vwap.toolkit}"/>
+	</target>
+
+	<!-- Compile the Vwap application , runs sc -->
+	<target name="compile">
+		<splcompile
+  	      mainComposite="${mainComposite}"
+		  standalone="true"
+  	      optimize="true"
+		  noToolkitIndexing="true"
+		  dataDirectory="${vwap.toolkit}/data">
+			<toolkit location="${vwap.toolkit}" />
+		</splcompile>
+	</target>
+
+        <!-- Submit the Vwap applicaton -->
+        <target name="submit" depends ="compile">
+          <submit outfile="jobids.out">
+            <applications>
+              <fileset dir="${basedir}/output" includes="*.adl"/>
+              <config name="tracing" value="debug"/>
+            </applications>
+          </submit>
+        </target>
+
+    <target name="doc">
+	<spldoc location="${vwap.toolkit}" compositeGraphs="yes"
+            title="VWAP Sample Application"
+            outputDirectory="${basedir}/doc"/>
+    </target>
+	
+	<!-- Remove the output directory created by the SPL compile -->
+    <target name="clean">
+        <delete dir="${basedir}/output"/>
+        <delete file="${basedir}/jobids.out"/>
+        <delete dir="${basedir}/doc"/>
+    </target>
+</project>
+

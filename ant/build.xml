@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="com.ibm.ssb.ant" basedir="." default="jar">
+	<property environment="env"/>
+	<property name="src" location="src" />
+	<property name="bin" location="bin" />
+	<property name="lib" location="lib" />
+	<property name="antlib" location="${user.home}/.ant/lib" />
+
+	<target name="init">
+		<mkdir dir="${lib}" />
+		<mkdir dir="${bin}" />
+	</target>
+	
+    <target name="clean">
+        <delete dir="${lib}"/>
+    	<delete dir="${bin}"/>
+    </target>
+
+    <target name="install" depends="jar">
+    	<mkdir dir="${antlib}" />
+    	<copy file="${lib}/com.ibm.streamsx.ant.jar" todir="${antlib}"/>
+	</target>
+
+	<target name="compile" depends="init">
+		<javac destdir="${bin}" debug="true">
+			<src path="${src}"/>
+			<classpath>
+			</classpath>
+		</javac>
+    	        <copy file="${src}/com/ibm/streamsx/ant/streams.xml"
+    	               todir="${bin}/com/ibm/streamsx/ant"/>
+	</target>
+
+	<target name="jar" depends="compile">
+		<jar destfile="${lib}/com.ibm.streamsx.ant.jar" basedir="${bin}" />
+	</target>
+</project>
