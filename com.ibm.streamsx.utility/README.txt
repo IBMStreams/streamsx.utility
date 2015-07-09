@@ -1,6 +1,5 @@
-Licensed Materials - Property of IBM
 Streams Performance & Other Utilities Toolkit
-(c) Copyright IBM Corp. 2015
+Copyright (C) 2015, International Business Machines Corporation
 All rights reserved.
 
 US Government Users Restricted Rights -
