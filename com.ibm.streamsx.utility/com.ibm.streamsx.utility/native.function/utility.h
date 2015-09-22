@@ -8,4 +8,6 @@
 
 namespace com { namespace ibm { namespace streamsx { namespace utility {
     uint64_t setCPUAffinity(uint64_t a); 
+    uint64_t setProcessNodeAffinity(uint64_t a);
+    uint64_t getNodeCount(); 
 }}}}
