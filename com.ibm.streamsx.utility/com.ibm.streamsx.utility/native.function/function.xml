@@ -11,6 +11,14 @@
         <description></description>
         <prototype>public uint64 setCPUAffinity(uint64 cpu)</prototype>
       </function>
+      <function>
+        <description></description>
+        <prototype>public uint64 setProcessNodeAffinity(uint64 node)</prototype>
+      </function>
+      <function>
+        <description></description>
+        <prototype>public uint64 getNodeCount()</prototype>
+      </function>
     </functions>
     <dependencies>
       <library>
