@@ -1,23 +1,28 @@
 #!/usr/bin/perl
-# Copyright (C) 2015, International Business Machines Corporation  
+################################################################################
+# Copyright (C) 2015, International Business Machines Corporation
 # All Rights Reserved
+################################################################################
 
 use strict;
 use warnings;
 
 use POSIX qw(strftime);
 use Time::HiRes qw(gettimeofday usleep);
-
+use IO::Handle;
 use Getopt::Std;
 use File::Basename;
 
 ###############################################
 ## Constance mapping stat and statm files
 ###############################################
-our $CPU_USER=13;
-our $CPU_KERNEL=14;
-our $MEM_VIRTUAL=0;
-our $MEM_REAL=1;
+my $CPU_USER=13;
+my $CPU_KERNEL=14;
+my $CPU_NUMTHREADS=19;
+my $CPU_CPU=38;
+my $CPU_BLOCKIO=41;
+my $MEM_VIRTUAL=0;
+my $MEM_REAL=1;
 
 my $sname = basename($0);
 my $help="usage: $sname -C -D -M -o <output directory> -s <stopfile>
@@ -115,6 +120,7 @@ sub main() {
 	}
 	my @cpu_user;
 	my @cpu_kernel;
+	my @cpu_ioblock;
 	my $meminfo;
 	my $cpuinfo;
 	$meminfo = `$meminfo_cmd`;
@@ -134,6 +140,7 @@ sub main() {
 		my @parse_line = split / /,$in_line;
 		$cpu_user[$i]=$parse_line[$CPU_USER];
 		$cpu_kernel[$i]=$parse_line[$CPU_KERNEL];
+		$cpu_ioblock[$i]=$parse_line[$CPU_BLOCKIO];
 		if ($in_line =~ m/.+\((.+)\)/) {
 			$process_name = $1;
 			if ($i > $process_names_given) {
@@ -157,7 +164,7 @@ sub main() {
 		$fbase = "DEBUG_$fbase";
 	}
 	my $filename = "$outdir/$fbase.csv";
-	print("starting stats collection on system $host to file $filename for processes $processes_p on $interval second interval - to end do:\nrm $stopfile\n");
+	print("starting process stats collection on system $host to file $filename for processes $processes_p on $interval second interval - to end do:\nrm $stopfile\n");
 	system("touch $stopfile");
 	open (OUTFILE, ">$filename");
 	my $header_line0 = ",,,,,";
@@ -171,9 +178,9 @@ sub main() {
 			$header_line2 = "$header_line2,Real,Virtual";
 		}
 		if ($CPU) {
-			$header_line0 = "$header_line0,,";
-			$header_line1 = "$header_line1,CPU,";
-			$header_line2 = "$header_line2,User,Kernel";
+			$header_line0 = "$header_line0,,,,";
+			$header_line1 = "$header_line1,CPU,,,";
+			$header_line2 = "$header_line2,User,Kernel,IO Blocking,Number of Threads";
 		}
 	}
 	print OUTFILE "$header_line0\n$header_line1\n$header_line2\n";
@@ -183,7 +190,7 @@ sub main() {
 #	print "time $time.$us sleep $sleep\n";
 	usleep($sleep);
 
-	while (-e $stopfile) {
+	while ('true') {
 		($time, $us) = gettimeofday();
 		if ($MEMORY) {
 			$meminfo = `$meminfo_cmd`;
@@ -249,6 +256,12 @@ sub main() {
 				$calc_val=$temp_val-$cpu_kernel[$i];
 				$line="$line, $calc_val";
 				$cpu_kernel[$i]=$temp_val;
+				$temp_val=$parse_line[$CPU_BLOCKIO];
+				$calc_val=$temp_val-$cpu_ioblock[$i];
+				$line="$line, $calc_val";
+				$cpu_ioblock[$i]=$temp_val;
+				$calc_val=$parse_line[$CPU_NUMTHREADS];
+				$line="$line,$calc_val";
 			}
 			if ($DEBUG) {
 				$debug_line = "$debug_line, ";
@@ -258,15 +271,20 @@ sub main() {
 		if ($DEBUG) {
 			print OUTFILE "$debug_line\n";
 		}
+		if (! -e $stopfile) {
+			last;
+		}
 		($time, $us) = gettimeofday();
 		$sleep = ($interval - ($time % $interval)) * 1000000 - $us;
 		usleep($sleep);
 	}
+	OUTFILE->autoflush(1);
 	close(OUTFILE);
 	return(0);
 }
 
 my $rc = main();
-print "$sname complete\n";
+my $date=`date`;
+print "$sname complete at $date\n";
 exit($rc);
 

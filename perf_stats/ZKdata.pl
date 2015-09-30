@@ -1,6 +1,8 @@
 #!/usr/bin/perl
-# Copyright (C) 2015, International Business Machines Corporation  
+################################################################################
+# Copyright (C) 2015, International Business Machines Corporation
 # All Rights Reserved
+################################################################################
 
 use strict;
 use warnings;
@@ -185,7 +187,9 @@ while (-e $touchfile) {
 		}
 		$line .= sprintf(' %10s %10d %10d %10d %10d %10d %s',$ZKrole,$minLatency,$aveLatency,$maxLatency,$receivedCount,$sentCount,$disk_line);
 		print ZKOUTFILE "$line\n";
-		usleep($us ? $uinterval - $us : $uinterval);
+		($time, $us) = gettimeofday();
+		my $sleep = ($interval - ($time % $interval)) * 1000000 - $us;
+		usleep($sleep);
 		($time, $us) = gettimeofday();
 		my $interval_start_millis = $time * 1000 + $us/1000;
 		$interval_millis = $interval_start_millis - $last_interval_start_millis;
