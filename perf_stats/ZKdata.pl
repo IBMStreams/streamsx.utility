@@ -106,7 +106,7 @@ print "starting collection on system $host - to end do:\n";
 print "rm $touchfile\n";
 
 if ($ResetStats) {
-	my @ZKreset = `echo 'srst' | nc localhost 2181`;
+	my @ZKreset = `echo 'srst' | nc localhost $ZKport`;
 }
 
 while (-e $touchfile) {
@@ -133,7 +133,7 @@ while (-e $touchfile) {
 		}
 		my @ZKinfo = `echo 'stat' | nc localhost $ZKport`;
 		if ($ResetStats) {
-			my @ZKreset = `echo 'srst' | nc localhost 2181`;
+			my @ZKreset = `echo 'srst' | nc localhost $ZKport`;
 		}
 		my $disk_line = "";
 		if ("$disk_device" ne "") {
