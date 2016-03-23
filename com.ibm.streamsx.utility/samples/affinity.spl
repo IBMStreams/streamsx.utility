@@ -1,0 +1,45 @@
+/*******************************************************************************
+* Copyright (C) 2015, International Business Machines Corporation
+* All Rights Reserved
+*******************************************************************************/
+
+use com.ibm.streamsx.utility::*;
+
+composite affinity {
+
+type
+  DataStat = int32 count;
+
+graph
+  stream<int8 i> b = Beacon() { param period: 0.1; }
+
+  stream<DataStat> c = Functor(b) {
+    logic
+      state : {
+        mutable int32 beatCount = 0;
+        mutable boolean runOnce = false;
+      }
+      onTuple b : {
+        // First time through this code, set the affinity.  The thread will
+        // stay on the chosen processor until told otherwise.
+        if(runOnce == false) { 
+          setCPUAffinity((uint64)0); 
+          runOnce = true;
+        }
+        beatCount++;
+
+	// Add some gratuitous busy work to show a busy processor.
+	mutable int32 i = 0; while(i<(int32)10000000) {i++; beatCount++;}
+      }
+    output
+      c : count = beatCount; 
+  }
+
+  () as Writer = Custom(c) 
+  {
+    logic
+      onTuple c : {
+        println(c); 
+      }
+  }
+}

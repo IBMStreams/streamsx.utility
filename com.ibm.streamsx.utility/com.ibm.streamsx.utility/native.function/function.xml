@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (C) 2015, International Business Machines Corporation  -->
+<!-- All Rights Reserved                                              -->
+<!--                                                                  -->
+<functionModel xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.ibm.com/xmlns/prod/streams/spl/function" xmlns:cmn="http://www.ibm.com/xmlns/prod/streams/spl/common" xsi:schemaLocation="http://www.ibm.com/xmlns/prod/streams/spl/function functionModel.xsd">
+  <functionSet>
+    <headerFileName>utility.h</headerFileName>
+    <cppNamespaceName></cppNamespaceName>
+    <functions>
+      <function>
+        <description></description>
+        <prototype>public uint64 setCPUAffinity(uint64 cpu)</prototype>
+      </function>
+      <function>
+        <description></description>
+        <prototype>public uint64 setProcessNodeAffinity(uint64 node)</prototype>
+      </function>
+      <function>
+        <description></description>
+        <prototype>public uint64 getNodeCount()</prototype>
+      </function>
+    </functions>
+    <dependencies>
+      <library>
+        <cmn:description>Utility Functions</cmn:description>
+        <cmn:managedLibrary>
+          <cmn:lib>utility</cmn:lib>
+          <cmn:libPath>lib</cmn:libPath>
+          <cmn:includePath>./</cmn:includePath>
+        </cmn:managedLibrary>
+      </library>
+    </dependencies>
+  </functionSet>
+</functionModel>
