@@ -3,7 +3,7 @@
 Displays CPU utilization for PEs in a Streams instance.
 
 # Synopsis
-    lscpus [ -i instance_name] [ -s sort_by_key] [ -t ]
+    lscpus [ -i instance_name] [ -d domain_name] [ -s sort_by_key] [ -t ]
 
 # Installation
 Put the `lscpus` program anywhere in your `$PATH`.
@@ -23,6 +23,10 @@ The options are:
  * `-i instance_name`
    Specifies the Streams instance to use. The default is the default for 
    `streamtool`.
+
+ * `-d domain_name`
+   Specifies the Streams domain to use. If not provided, then the environment 
+   variable `STREAMS_DOMAIN_ID` will be used.
  
  * `-s sort_by_key`
    Specifies how to sort the output. The default is `cpu`. The options are:
