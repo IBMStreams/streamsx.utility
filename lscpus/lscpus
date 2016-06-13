@@ -155,6 +155,8 @@ def main():
     parser = OptionParser()
     parser.add_option('-i', '--instance', dest='instance',
                       help='streams instance name', metavar='INST')
+    parser.add_option('-d', '--domain', dest='domain',
+                      help='streams domain name', metavar='INST')
     parser.add_option('-s', '--sortby', dest='key',
                       help='field to sort by', metavar='KEY')
     parser.add_option('-t', '--threading', dest='threading',
@@ -164,6 +166,8 @@ def main():
     st = [os.environ['STREAMS_INSTALL'] + '/bin/streamtool', 'lspes']
     if options.instance:
         st += ['-i', options.instance]
+    if options.domain:
+        st += ['-d', options.domain]
 
     lspes = exec_exit(st)
 

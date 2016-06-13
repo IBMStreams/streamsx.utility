@@ -1,0 +1,100 @@
+#!/bin/bash
+################################################################################
+# Copyright (C) 2015, International Business Machines Corporation
+# All Rights Reserved
+################################################################################
+COUNTER="cycles"
+TIME=60
+CALL_DEPTH=""
+OUT_DIR="/tmp"
+PREFIX="perf-record"
+PROCESS_ID=0
+KERNEL_IMAGE="NONE"
+VERBOSE="N"
+STOP_FILE=""
+THREADS=""
+THREADS_FROM_PROCESS=0
+GPROF2DOT="/home/socc02/bin/gprof2dot.py"
+while getopts a:c:k:o:p:Ps:St:TV OPT; do
+	case ${OPT} in
+		c) COUNTER=${OPTARG} ;;
+		k) KERNEL_IMAGE=${OPTARG} ;;
+		o) OUT_DIR=${OPTARG} ;;
+		p) PROCESS_ID=${OPTARG} ;;
+		P) THREADS_FROM_PROCESS=1 ;;
+		s) STOP_FILE=${OPTARG} ;;
+		S) CALL_DEPTH=" -g" ;;
+		t) TIME=${OPTARG} ;;
+		T) THREADS=" -s" ;;
+		V) VERBOSE="Y";;
+	esac
+done
+DATE_STRING=`date +%Y%m%d%H%M%S`
+#NMON_FILE=$OUT_DIR"/server_"$DATE_STRING"_nmon.csv"
+PROFILE_SESSION=$PREFIX"_"$DATE_STRING"_prof"
+PROFILE_RAW_DATA_DIR=$OUT_DIR"/"$PROFILE_SESSION
+PROFILE_RAW_DATA_FILE=$PROFILE_RAW_DATA_DIR"/perf.data"
+PROFILE_LOG=$PROFILE_RAW_DATA_DIR"/"$DATE_STRING"_log.txt"
+PROFILE_FILE=$PROFILE_RAW_DATA_DIR"/"$DATE_STRING".txt"
+PROFILE_FILE_MERGED=$PROFILE_RAW_DATA_DIR"/"$DATE_STRING"_mrg.txt"
+PROFILE_FILE_CALLGRAPH=$PROFILE_RAW_DATA_DIR"/"$DATE_STRING"_cg.txt"
+PROFILE_FILE_ANNOTATED=$PROFILE_RAW_DATA_DIR"/"$DATE_STRING"_ann.txt"
+echo $COUNTER $KERNEL_IMAGE
+echo $CALL_DEPTH
+mkdir $PROFILE_RAW_DATA_DIR
+PROFILE_CMD="perf record -e "$COUNTER$CALL_DEPTH$THREADS" -o "$PROFILE_RAW_DATA_FILE
+if [ $PROCESS_ID != 0 ] ; then
+	PROFILE_CMD=$PROFILE_CMD" -p "$PROCESS_ID
+else
+	PROFILE_CMD=$PROFILE_CMD" -a"
+fi
+if [ $VERBOSE = "Y" ] ; then
+	echo $PROFILE_CMD
+fi
+if [ "$STOP_FILE" != "" ] ; then
+	touch $STOP_FILE
+fi
+echo "Starting profile "`date`
+$PROFILE_CMD &
+PROFILE_PID=$!
+#echo "Process ID: "$PROFILE_PID
+if [ "$STOP_FILE" = "" ] ; then
+	sleep $TIME 
+else
+	while [ -e $STOP_FILE ] && [ $TIME -gt 0 ] ; do
+		TIME=$((TIME-1))
+		sleep 1
+	done
+fi
+echo "Killing profile "`date`
+kill -SIGINT $PROFILE_PID
+wait $PROFILE_PID
+echo "Profile process gone "`date`
+
+if [ 1 -eq 0 ]; then
+$REPORT_CMD="perf report -i "$PROFILE_RAW_DATA_FILE 
+if [ $KERNEL_IMAGE != "NONE" ] ; then
+	REPORT_CMD=$REPORT_CMD" -k "$KERNEL_IMAGE
+fi
+if [ $VERBOSE = "Y" ] ; then
+	echo $REPORT_CMD
+fi
+echo "Generating per CPU profile "`date`
+$REPORT_CMD
+echo "Generating merged profile "`date`
+exit 1
+/opt/at7.0/bin/opreport -l --merge=all --session-dir=$PROFILE_RAW_DATA -p /lib/modules/`uname -r` --symbols --demangle=smart -o $PROFILE_FILE_MERGED 2> mrg.txt
+echo "Generating annotated listing to $PROFILE_FILE_ANNOTATED "`date`
+#ANNOTATE_CMD="/opt/at7.0/bin/opannotate --session-dir=$PROFILE_RAW_DATA --demangle=smart --merge=all --threshold=5 --search-dirs=$SOURCE_DIR --source -o $PROFILE_DIR_ANNOTATED" 
+ANNOTATE_CMD="/opt/at7.0/bin/opannotate --session-dir=$PROFILE_RAW_DATA --demangle=smart --merge=all --threshold=5 --source --assembly" 
+echo $ANNOTATE_CMD
+$ANNOTATE_CMD 2>annotate.txt > $PROFILE_FILE_ANNOTATED
+if [ "$CALL_DEPTH" != "" ] ; then
+	echo "Generating callgraph "`date`
+	/opt/at7.0/bin/opreport -l --merge=all --session-dir=$PROFILE_RAW_DATA -p /lib/modules/`uname -r` --callgraph=$CALL_DEPTH -o $PROFILE_FILE_CALLGRAPH 2> cg.txt
+#	cat $PROFILE_FILE_CALLGRAPH | $GPROF2DOT -f oprofile | dot -Tpng -o $PROFILE_FILE_CALLGRAPH2
+fi
+echo "Copying log to $PROFILE_LOG "`date`
+cp $PROFILE_RAW_DATA/samples/operf.log $PROFILE_LOG
+fi
+echo "Done running "`date`

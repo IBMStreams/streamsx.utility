@@ -1,6 +1,8 @@
 #!/usr/bin/perl
-# Copyright (C) 2015, International Business Machines Corporation  
+################################################################################
+# Copyright (C) 2015, International Business Machines Corporation
 # All Rights Reserved
+################################################################################
 
 use strict;
 use warnings;

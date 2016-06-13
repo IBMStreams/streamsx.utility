@@ -1,13 +1,15 @@
 #!/usr/bin/perl
-# Copyright (C) 2015, International Business Machines Corporation  
+################################################################################
+# Copyright (C) 2015, International Business Machines Corporation
 # All Rights Reserved
+################################################################################
 
 use strict;
 use warnings;
 
 use POSIX qw(strftime);
 use Time::HiRes qw(gettimeofday usleep);
-
+use IO::Handle;
 use Getopt::Std;
 use File::Basename;
 
@@ -79,9 +81,6 @@ sub main() {
 
 	my $host=`hostname`;
 	chomp $host;
-	print("starting memory collection on system $host on $interval second interval - to end do:\n");
-	print("rm $stopfile\n");
-	system("touch $stopfile");
 
 	($time, $us) = gettimeofday();
 	my $meminfo = `numactl --hardware`;
@@ -98,7 +97,9 @@ sub main() {
 	}
 	my $filename = "$outdir/$fbase.csv";
 	open (OUTFILE, ">$filename");
-	print "writing to $filename\n";
+	print("starting collection on system $host on $interval second interval to $filename - to end do:\n");
+	print("rm $stopfile\n");
+	system("touch $stopfile");
 	my $header_line = "host, date, time, epoch, time us";
 	if ($PROCESSOR) {
 		$header_line = "$header_line,Avg_MHz";
@@ -135,7 +136,7 @@ sub main() {
 #	print "time $time.$us sleep $sleep\n";
 	usleep($sleep);
 
-	while (-e $stopfile) {
+	while ('true') {
 		($time, $us) = gettimeofday();
 		if ($MEMORY) {
 			$meminfo = `numactl --hardware`;
@@ -208,15 +209,20 @@ sub main() {
 		if ($DEBUG) {
 			print OUTFILE "$debug_line\n";
 		}
+		if (! -e $stopfile) {
+			last;
+		}
 		($time, $us) = gettimeofday();
 		$sleep = ($interval - ($time % $interval)) * 1000000 - $us;
 		usleep($sleep);
 	}
+	OUTFILE->autoflush(1);
 	close(OUTFILE);
 	return(0);
 }
 
 my $rc = main();
-print "$sname complete\n";
+my $date=`date`;
+print "$sname complete at $date\n";
 exit($rc);
 

@@ -1,0 +1,100 @@
+#!/bin/bash
+################################################################################
+# Copyright (C) 2015, International Business Machines Corporation
+# All Rights Reserved
+################################################################################
+COUNTER="PM_RUN_CYC_GRP1:5000000"
+TIME=60
+CALL_DEPTH=""
+OUT_DIR="/tmp"
+PREFIX="server"
+PROCESS_ID=0
+KERNEL_IMAGE="NONE"
+REPORT=0
+MERGE_CPU=" -c"
+VERBOSE="N"
+STOP_FILE=""
+GPROF2DOT="/home/socc02/bin/gprof2dot.py"
+while getopts a:c:k:Mo:p:Rs:St:V OPT; do
+	case ${OPT} in
+		c) COUNTER=${OPTARG} ;;
+		k) KERNEL_IMAGE=${OPTARG} ;;
+		M) MERGE_CPU="" ;;
+		o) OUT_DIR=${OPTARG} ;;
+		p) PROCESS_ID=${OPTARG} ;;
+		R) REPORT=1 ;;
+		s) STOP_FILE=${OPTARG} ;;
+		S) CALL_DEPTH=" -g" ;;
+		t) TIME=${OPTARG} ;;
+		V) VERBOSE="Y";;
+	esac
+done
+DATE_STRING=`date +%Y%m%d%H%M%S`
+#NMON_FILE=$OUT_DIR"/server_"$DATE_STRING"_nmon.csv"
+PROFILE_SESSION=$PREFIX"_"$DATE_STRING"_prof"
+PROFILE_RAW_DATA=$OUT_DIR"/"$PROFILE_SESSION
+PROFILE_FILE=$PROFILE_RAW_DATA".txt"
+PROFILE_LOG=$PROFILE_RAW_DATA"_log.txt"
+PROFILE_FILE_MERGED=$PROFILE_RAW_DATA"_mrg.txt"
+PROFILE_FILE_CALLGRAPH=$PROFILE_RAW_DATA"_cg.txt"
+PROFILE_FILE_CALLGRAPH2=$PROFILE_RAW_DATA"_cg2.txt"
+PROFILE_FILE_ANNOTATED=$PROFILE_RAW_DATA"_ann.txt"
+echo $COUNTER $KERNEL_IMAGE
+echo $CALL_DEPTH
+#exit 1
+if [ $COUNTER != "NONE" ] ; then
+	mkdir $PROFILE_RAW_DATA
+	PROFILE_CMD="operf -e "$COUNTER$CALL_DEPTH" -d "$PROFILE_RAW_DATA$MERGE_CPU
+	if [ $PROCESS_ID != 0 ] ; then
+		PROFILE_CMD=$PROFILE_CMD" -p "$PROCESS_ID
+	else
+		PROFILE_CMD=$PROFILE_CMD" -s"
+	fi
+	if [ $KERNEL_IMAGE != "NONE" ] ; then
+		PROFILE_CMD=$PROFILE_CMD" -k "$KERNEL_IMAGE
+	fi
+#	/opt/at7.0/bin/opcontrol --event=PM_RUN_CYC_GRP1:500000
+#	/opt/at7.0/bin/opcontrol --event=PM_MRK_DATA_FROM_L2MISS_GRP228:10000 
+#	/opt/at7.0/bin/opcontrol --event=PM_MRK_DATA_FROM_L21_MOD_CYC_GRP229:10000
+#	/opt/at7.0/bin/opcontrol --event=PM_MRK_DATA_FROM_L3_CYC_GRP230:10000
+#	/opt/at7.0/bin/opcontrol --event=PM_MRK_DATA_FROM_RMEM_CYC_GRP238:10000
+#	PROFILE_CMD=$PROFILE_CMD"&"
+	echo $PROFILE_CMD
+	if [ "$STOP_FILE" != "" ] ; then
+		touch $STOP_FILE
+	fi
+	echo "Starting profile "`date`
+	$PROFILE_CMD &
+	PROFILE_PID=$!
+	echo "Process ID: "$PROFILE_PID
+#	nmon -s 1 -c $TIME -F $NMON_FILE
+	sleep $TIME 
+	echo "Killing profile "`date`
+	kill -SIGINT $PROFILE_PID
+	wait $PROFILE_PID
+	echo "Profile process gone "`date`
+	if [ $REPORT -eq 1 ] ; then
+#		/opt/at7.0/bin/opreport session:$PROFILE_SESSION -l -p /lib/modules/`uname -r` > $PROFILE_FILE
+		echo "Generating per CPU profile "`date`
+		/opt/at7.0/bin/opreport -l --merge=tid,tgid,lib,unitmask --session-dir=$PROFILE_RAW_DATA -p /lib/modules/`uname -r` --symbols --demangle=smart -o $PROFILE_FILE 2> prof.txt
+		echo "Generating merged profile "`date`
+		/opt/at7.0/bin/opreport -l --merge=all --session-dir=$PROFILE_RAW_DATA -p /lib/modules/`uname -r` --symbols --demangle=smart -o $PROFILE_FILE_MERGED 2> mrg.txt
+		echo "Generating annotated listing to $PROFILE_FILE_ANNOTATED "`date`
+#		ANNOTATE_CMD="/opt/at7.0/bin/opannotate --session-dir=$PROFILE_RAW_DATA --demangle=smart --merge=all --threshold=5 --search-dirs=$SOURCE_DIR --source -o $PROFILE_DIR_ANNOTATED" 
+		ANNOTATE_CMD="/opt/at7.0/bin/opannotate --session-dir=$PROFILE_RAW_DATA --demangle=smart --merge=all --threshold=5 --source --assembly" 
+		echo $ANNOTATE_CMD
+		$ANNOTATE_CMD 2>annotate.txt > $PROFILE_FILE_ANNOTATED
+		if [ "$CALL_DEPTH" != "" ] ; then
+			echo "Generating callgraph "`date`
+			/opt/at7.0/bin/opreport -l --merge=all --session-dir=$PROFILE_RAW_DATA -p /lib/modules/`uname -r` --callgraph=$CALL_DEPTH -o $PROFILE_FILE_CALLGRAPH 2> cg.txt
+#			cat $PROFILE_FILE_CALLGRAPH | $GPROF2DOT -f oprofile | dot -Tpng -o $PROFILE_FILE_CALLGRAPH2
+		fi
+	fi
+	echo "Copying log to $PROFILE_LOG "`date`
+	cp $PROFILE_RAW_DATA/samples/operf.log $PROFILE_LOG
+	echo "Done running "`date`
+#	cat $NMON_FILE | awk 'BEGIN{FS=",";c=0;printf("(")} /CPU005/{if ($6 < 30.0) {if (c>0){printf("+");}printf("%f", $3);c++}} END{printf(")/%d\n",c)}'
+#	cat $NMON_FILE | awk 'BEGIN{FS=",";c=0;printf("(")} /CPU005/{if ($6 < 30.0) {if (c>0){printf("+");}printf("%f", $4);c++}} END{printf(")/%d\n",c)}'
+fi
+#echo "starting lpcpu\n"
+#duration=60 /home/socc02/bin/lpcpu/lpcpu.sh
