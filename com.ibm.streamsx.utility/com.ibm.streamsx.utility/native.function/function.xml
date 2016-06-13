@@ -25,7 +25,7 @@
         <cmn:description>Utility Functions</cmn:description>
         <cmn:managedLibrary>
           <cmn:lib>utility</cmn:lib>
-          <cmn:libPath>lib</cmn:libPath>
+          <cmn:libPath>../../impl/lib</cmn:libPath>
           <cmn:includePath>./</cmn:includePath>
         </cmn:managedLibrary>
       </library>
