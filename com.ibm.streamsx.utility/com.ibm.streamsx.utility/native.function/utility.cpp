@@ -55,4 +55,32 @@ namespace com { namespace ibm { namespace streamsx { namespace utility {
     {
         return(numa_max_node()+1);
     }
+
+    uint64_t setCPUAffinity_add(uint64_t a)
+    {
+        cpu_set_t cpumask; // CPU affinity bit mask
+        CPU_ZERO(&cpumask);
+        const int rc_getaffinity = sched_getaffinity(gettid(), sizeof cpumask, &cpumask);
+        if (rc_getaffinity<0) THROW (SPLRuntimeOperator, "could not get processor affinity"
+            << ", " << strerror(errno));
+
+        CPU_SET(a, &cpumask);
+        const int rc = sched_setaffinity(gettid(), sizeof cpumask, &cpumask);
+        if (rc<0) THROW (SPLRuntimeOperator, "could not set processor affinity to " << a
+            << ", " << strerror(errno));
+
+        return(a);
+    }
+
+    void setCPUAffinity_list(std::vector<uint64_t> a)
+    {
+        cpu_set_t cpumask; // CPU affinity bit mask
+        CPU_ZERO(&cpumask);
+        for (std::vector<uint64_t>::iterator it = a.begin(); it != a.end(); ++it) {
+            CPU_SET(*it, &cpumask);
+        }
+        const int rc = sched_setaffinity(gettid(), sizeof cpumask, &cpumask);
+        if (rc<0) THROW (SPLRuntimeOperator, "could not set processor affinity to CPUs"
+            << ", " << strerror(errno));
+    }
 }}}}
