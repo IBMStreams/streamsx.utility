@@ -21,11 +21,11 @@
       </function>
       <function>
         <description></description>
-        <prototype>public uint64 setCPUAffinity_add(uint64 cpu)</prototype>
+        <prototype>public uint64 addCPUAffinity(uint64 cpu)</prototype>
       </function>
       <function>
         <description></description>
-        <prototype>public void setCPUAffinity_list(list&lt;uint64> cpus)</prototype>
+        <prototype>public void setCPUAffinity(list&lt;uint64> cpus)</prototype>
       </function>
     </functions>
     <dependencies>

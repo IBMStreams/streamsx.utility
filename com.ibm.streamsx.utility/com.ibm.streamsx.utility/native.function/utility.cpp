@@ -56,7 +56,7 @@ namespace com { namespace ibm { namespace streamsx { namespace utility {
         return(numa_max_node()+1);
     }
 
-    uint64_t setCPUAffinity_add(uint64_t a)
+    uint64_t addCPUAffinity(uint64_t a)
     {
         cpu_set_t cpumask; // CPU affinity bit mask
         CPU_ZERO(&cpumask);
@@ -72,7 +72,7 @@ namespace com { namespace ibm { namespace streamsx { namespace utility {
         return(a);
     }
 
-    void setCPUAffinity_list(std::vector<uint64_t> a)
+    void setCPUAffinity(std::vector<uint64_t> a)
     {
         cpu_set_t cpumask; // CPU affinity bit mask
         CPU_ZERO(&cpumask);
