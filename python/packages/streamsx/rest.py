@@ -554,6 +554,7 @@ def multi_graph_every(views, key, time_step):
     colors = 'bgrcmykw'
     _views = []
     for view in views:
+        view.initialize_rest()
         v = get_view_obj(view,view.get_streams_context())
         if v is not None:
             _views.append(v)
@@ -593,6 +594,7 @@ def multi_graph_every(views, key, time_step):
         ydatas = []
 
 def graph_every(view, key, time_step):
+    view.initialize_rest()
     view = get_view_obj(view, view.get_streams_context())
     if view is None:
         return None
