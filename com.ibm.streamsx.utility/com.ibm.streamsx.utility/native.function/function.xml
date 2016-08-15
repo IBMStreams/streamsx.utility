@@ -17,6 +17,10 @@
       </function>
       <function>
         <description></description>
+        <prototype>public uint64 setThreadNodeAffinity(uint64 node)</prototype>
+      </function>
+      <function>
+        <description></description>
         <prototype>public uint64 getNodeCount()</prototype>
       </function>
       <function>
