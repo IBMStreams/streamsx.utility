@@ -15,7 +15,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 class StreamsContext:
     def __init__(self, username, password, resource_url):
-        self.rest_client = StreamsRestClient(username, password)
+        self.rest_client = StreamsRestClient(username, password, resource_url)
         self.resource_url = resource_url
 
     def get_domains(self):

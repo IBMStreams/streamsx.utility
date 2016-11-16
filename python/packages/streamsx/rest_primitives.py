@@ -1,5 +1,6 @@
 # Licensed Materials - Property of IBM
 # Copyright IBM Corp. 2016
+import logging
 import requests
 
 from pprint import pprint, pformat
@@ -7,9 +8,11 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
+logger = logging.getLogger('streamsx.rest_primitives')
 
 class StreamsRestClient(object):
-    def __init__(self, username, password):
+    def __init__(self, username, password, resource_url):
+        self.resource_url = resource_url
         # Create session to reuse TCP connection
         # https authentication
         self._username = username
@@ -22,6 +25,7 @@ class StreamsRestClient(object):
         self.session = session
 
     def make_request(self, url):
+        logger.debug('Beginning a REST request to: ' + url)
         return self.session.get(url).json()
 
     def __str__(self):

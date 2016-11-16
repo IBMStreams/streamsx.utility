@@ -11,8 +11,8 @@ if __name__ == '__main__':
 
     # Set up a logging framework. Test output from streams.test.* will percolate up to the streamsx.test logger
     # and be output on stdout.
-    logging.basicConfig(stream=sys.stderr, level=logging.INFO)
-    logging.getLogger('streamsx.test').setLevel(logging.INFO)
+    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+    logging.getLogger('streamsx').setLevel(logging.DEBUG)
 
     # Search for valid test suites.
     suite = unittest.TestLoader().discover('.', pattern='*tests.py')
