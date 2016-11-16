@@ -97,36 +97,6 @@ class StreamsContext(StreamsRestClient):
     def __str__(self):
         return pformat(self.__dict__)
 
-
-class StreamsRestConnection(object):
-    """
-    A StreamsRestClient provides convenience methods for connecting to the Streams REST API.
-    """
-
-    def __init__(self, username=None, password=None, session=None):
-        # Create session to reuse TCP connection
-        if session is None:
-            # https authentication
-            self._username = username
-            self._password = password
-
-            session = requests.Session()
-            session.auth = (username, password)
-            session.verify = False
-        else:
-            self._username = session.auth[0]
-            self._password = session.auth[1]
-
-        self.session = session
-
-    @classmethod
-    def from_session(cls, _session):
-        return cls(session=_session)
-
-    @classmethod
-    def from_login(cls, _username, _password):
-        return cls(username=_username, password=_password)
-
 def get_view_obj(_view, rc):
     for domain in rc.get_domains():
         for instance in domain.get_instances():
