@@ -2,16 +2,35 @@
 # Copyright IBM Corp. 2016
 import requests
 
-from .rest import StreamsRestClient
 from pprint import pprint, pformat
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 
-class View(StreamsRestClient):
-    def __init__(self, json_view, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class StreamsRestClient(object):
+    def __init__(self, username, password):
+        # Create session to reuse TCP connection
+        # https authentication
+        self._username = username
+        self._password = password
+
+        session = requests.Session()
+        session.auth = (username, password)
+        session.verify = False
+
+        self.session = session
+
+    def make_request(self, url):
+        return self.session.get(url).json()
+
+    def __str__(self):
+        return pformat(self.__dict__)
+
+
+class View:
+    def __init__(self, json_view, rest_client):
+        self.rest_client=rest_client
         for key in json_view:
             if key == 'self':
                 self.__dict__["rest_self"] = json_view['self']
@@ -19,27 +38,27 @@ class View(StreamsRestClient):
                 self.__dict__[key] = json_view[key]
 
     def get_domain(self):
-        return Domain(self.make_request(self.domain), self.rest_connection)
+        return Domain(self.rest_client.make_request(self.domain), self.rest_client)
 
     def get_instance(self):
-        return Instance(self.make_request(self.instance), self.rest_connection)
+        return Instance(self.rest_client.make_request(self.instance), self.rest_client)
 
     def get_job(self):
-        return Job(self.make_request(self.job), self.rest_connection)
+        return Job(self.rest_client.make_request(self.job), self.rest_client)
 
     def get_view_items(self):
         view_items = []
-        for json_view_items in self.make_request(self.viewItems)['viewItems']:
-            view_items.append(ViewItem(json_view_items, self.rest_connection))
+        for json_view_items in self.rest_client.make_request(self.viewItems)['viewItems']:
+            view_items.append(ViewItem(json_view_items, self.rest_client))
         return view_items
 
     def __str__(self):
         return pformat(self.__dict__)
 
 
-class ActiveView(StreamsRestClient):
-    def __init__(self, json_rep, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class ActiveView:
+    def __init__(self, json_rep, rest_client):
+        self.rest_client=rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -50,9 +69,9 @@ class ActiveView(StreamsRestClient):
         return pformat(self.__dict__)
 
 
-class ViewItem(StreamsRestClient):
-    def __init__(self, json_rep, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class ViewItem:
+    def __init__(self, json_rep, rest_client):
+        self.rest_client=rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -63,9 +82,9 @@ class ViewItem(StreamsRestClient):
         return pformat(self.__dict__)
 
 
-class ConfiguredView(StreamsRestClient):
-    def __init__(self, json_rep, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class ConfiguredView:
+    def __init__(self, json_rep, rest_client):
+        self.rest_client=rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -76,9 +95,9 @@ class ConfiguredView(StreamsRestClient):
         return pformat(self.__dict__)
 
 
-class Host(StreamsRestClient):
-    def __init__(self, json_rep, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class Host:
+    def __init__(self, json_rep, rest_client):
+        self.rest_client=rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -89,9 +108,9 @@ class Host(StreamsRestClient):
         return pformat(self.__dict__)
 
 
-class Job(StreamsRestClient):
-    def __init__(self, json_rep, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class Job:
+    def __init__(self, json_rep, rest_client):
+        self.rest_client=rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -100,65 +119,65 @@ class Job(StreamsRestClient):
 
     def get_views(self):
         views = []
-        for json_view in self.make_request(self.views)['views']:
-            views.append(View(json_view, self.rest_connection))
+        for json_view in self.rest_client.make_request(self.views)['views']:
+            views.append(View(json_view, self.rest_client))
         return views
 
     def get_active_views(self):
         views = []
-        for json_view in self.make_request(self.activeViews)['activeViews']:
-            views.append(ActiveView(json_view, self.rest_connection))
+        for json_view in self.rest_client.make_request(self.activeViews)['activeViews']:
+            views.append(ActiveView(json_view, self.rest_client))
         return views
 
     def get_domain(self):
-        return Domain(self.make_request(self.domain), self.rest_connection)
+        return Domain(self.rest_client.make_request(self.domain), self.rest_client)
 
     def get_instance(self):
-        return Instance(self.make_request(self.instance), self.rest_connection)
+        return Instance(self.rest_client.make_request(self.instance), self.rest_client)
 
     def get_hosts(self):
         hosts = []
-        for json_rep in self.make_request(self.hosts)['hosts']:
-            hosts.append(Host(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.hosts)['hosts']:
+            hosts.append(Host(json_rep, self.rest_client))
         return hosts
 
     def get_operator_connections(self):
         operators_connections = []
-        for json_rep in self.make_request(self.operatorConnections)['operatorConnections']:
-            operators_connections.append(OperatorConnection(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.operatorConnections)['operatorConnections']:
+            operators_connections.append(OperatorConnection(json_rep, self.rest_client))
         return operators_connections
 
     def get_operators(self):
         operators = []
-        for json_rep in self.make_request(self.operators)['operators']:
-            operators.append(Operator(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.operators)['operators']:
+            operators.append(Operator(json_rep, self.rest_client))
         return operators
 
     def get_pes(self):
         pes = []
-        for json_rep in self.make_request(self.pes)['pes']:
-            pes.append(PE(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.pes)['pes']:
+            pes.append(PE(json_rep, self.rest_client))
         return pes
 
     def get_pe_connections(self):
         pe_connections = []
-        for json_rep in self.make_request(self.peConnections)['peConnections']:
-            pe_connections.append(PEConnection(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.peConnections)['peConnections']:
+            pe_connections.append(PEConnection(json_rep, self.rest_client))
         return pe_connections
 
     def get_resource_allocations(self):
         resource_allocations = []
-        for json_rep in self.make_request(self.resourceAllocations)['resourceAllocations']:
-            resource_allocations.append(ResourceAllocation(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.resourceAllocations)['resourceAllocations']:
+            resource_allocations.append(ResourceAllocation(json_rep, self.rest_client))
         return resource_allocations
 
     def __str__(self):
         return pformat(self.__dict__)
 
 
-class Operator(StreamsRestClient):
-    def __init__(self, json_rep, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class Operator:
+    def __init__(self, json_rep, rest_client):
+        self.rest_client=rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -169,9 +188,9 @@ class Operator(StreamsRestClient):
         return pformat(self.__dict__)
 
 
-class OperatorConnection(StreamsRestClient):
-    def __init__(self, json_rep, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class OperatorConnection:
+    def __init__(self, json_rep, rest_client):
+        self.rest_client=rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -182,9 +201,9 @@ class OperatorConnection(StreamsRestClient):
         return pformat(self.__dict__)
 
 
-class PE(StreamsRestClient):
-    def __init__(self, json_rep, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class PE:
+    def __init__(self, json_rep, rest_client):
+        self.rest_client=rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -195,9 +214,9 @@ class PE(StreamsRestClient):
         return pformat(self.__dict__)
 
 
-class PEConnection(StreamsRestClient):
-    def __init__(self, json_rep, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class PEConnection:
+    def __init__(self, json_rep, rest_client):
+        self.rest_client=rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -208,9 +227,9 @@ class PEConnection(StreamsRestClient):
         return pformat(self.__dict__)
 
 
-class ResourceAllocation(StreamsRestClient):
-    def __init__(self, json_rep, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class ResourceAllocation:
+    def __init__(self, json_rep, rest_client):
+        self.rest_client=rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -221,9 +240,9 @@ class ResourceAllocation(StreamsRestClient):
         return pformat(self.__dict__)
 
 
-class ActiveService(StreamsRestClient):
-    def __init__(self, json_rep, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class ActiveService:
+    def __init__(self, json_rep, rest_client):
+        self.rest_client=rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -234,9 +253,9 @@ class ActiveService(StreamsRestClient):
         return pformat(self.__dict__)
 
 
-class Installation(StreamsRestClient):
-    def __init__(self, json_rep, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class Installation:
+    def __init__(self, json_rep, rest_client):
+        self.rest_client=rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -247,9 +266,9 @@ class Installation(StreamsRestClient):
         return pformat(self.__dict__)
 
 
-class ImportedStream(StreamsRestClient):
-    def __init__(self, json_rep, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class ImportedStream:
+    def __init__(self, json_rep, rest_client):
+        self.rest_client=rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -260,9 +279,9 @@ class ImportedStream(StreamsRestClient):
         return pformat(self.__dict__)
 
 
-class ExportedStream(StreamsRestClient):
-    def __init__(self, json_rep, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class ExportedStream:
+    def __init__(self, json_rep, rest_client):
+        self.rest_client=rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -273,9 +292,9 @@ class ExportedStream(StreamsRestClient):
         return pformat(self.__dict__)
 
 
-class Instance(StreamsRestClient):
-    def __init__(self, json_domain, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class Instance:
+    def __init__(self, json_domain, rest_client):
+        self.rest_client=rest_client
         for key in json_domain:
             if key == 'self':
                 self.__dict__["rest_self"] = json_domain['self']
@@ -286,83 +305,83 @@ class Instance(StreamsRestClient):
 
     def get_operators(self):
         operators = []
-        for json_rep in self.make_request(self.operators)['operators']:
-            operators.append(Operator(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.operators)['operators']:
+            operators.append(Operator(json_rep, self.rest_client))
         return operators
 
     def get_operator_connections(self):
         operators_connections = []
-        for json_rep in self.make_request(self.operatorConnections)['operatorConnections']:
-            operators_connections.append(OperatorConnection(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.operatorConnections)['operatorConnections']:
+            operators_connections.append(OperatorConnection(json_rep, self.rest_client))
         return operators_connections
 
     def get_pes(self):
         pes = []
-        for json_rep in self.make_request(self.pes)['pes']:
-            pes.append(PE(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.pes)['pes']:
+            pes.append(PE(json_rep, self.rest_client))
         return pes
 
     def get_pe_connections(self):
         pe_connections = []
-        for json_rep in self.make_request(self.peConnections)['peConnections']:
-            pe_connections.append(PEConnection(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.peConnections)['peConnections']:
+            pe_connections.append(PEConnection(json_rep, self.rest_client))
         return pe_connections
 
     def get_views(self):
         views = []
-        for json_view in self.make_request(self.views)['views']:
-            views.append(View(json_view, self.rest_connection))
+        for json_view in self.rest_client.make_request(self.views)['views']:
+            views.append(View(json_view, self.rest_client))
         return views
 
     def get_hosts(self):
         hosts = []
-        for json_rep in self.make_request(self.hosts)['hosts']:
-            hosts.append(Host(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.hosts)['hosts']:
+            hosts.append(Host(json_rep, self.rest_client))
         return hosts
 
     def get_domain(self):
-        return Domain(self.make_request(self.domain), self.rest_connection)
+        return Domain(self.rest_client.make_request(self.domain), self.rest_client)
 
     def get_active_views(self):
         views = []
-        for json_view in self.make_request(self.activeViews)['activeViews']:
-            views.append(ActiveView(json_view, self.rest_connection))
+        for json_view in self.rest_client.make_request(self.activeViews)['activeViews']:
+            views.append(ActiveView(json_view, self.rest_client))
         return views
 
     def get_configured_views(self):
         views = []
-        for json_view in self.make_request(self.configuredViews)['configuredViews']:
-            views.append(ConfiguredView(json_view, self.rest_connection))
+        for json_view in self.rest_client.make_request(self.configuredViews)['configuredViews']:
+            views.append(ConfiguredView(json_view, self.rest_client))
         return views
 
     def get_jobs(self):
         jobs = []
-        for json_rep in self.make_request(self.jobs)['jobs']:
-            jobs.append(Job(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.jobs)['jobs']:
+            jobs.append(Job(json_rep, self.rest_client))
         return jobs
 
     def get_imported_streams(self):
         imported_streams = []
-        for json_rep in self.make_request(self.importedStreams)['importedStreams']:
-            imported_streams.append(ImportedStream(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.importedStreams)['importedStreams']:
+            imported_streams.append(ImportedStream(json_rep, self.rest_client))
         return imported_streams
 
     def get_exported_streams(self):
         exported_streams = []
-        for json_rep in self.make_request(self.exportedStreams)['exportedStreams']:
-            exported_streams.append(ExportedStream(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.exportedStreams)['exportedStreams']:
+            exported_streams.append(ExportedStream(json_rep, self.rest_client))
         return exported_streams
 
     def get_active_services(self):
         active_services = []
-        for json_rep in self.make_request(self.activeServices)['activeServices']:
-            active_services.append(ActiveService(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.activeServices)['activeServices']:
+            active_services.append(ActiveService(json_rep, self.rest_client))
         return active_services
 
     def get_resource_allocations(self):
         resource_allocations = []
-        for json_rep in self.make_request(self.resourceAllocations)['resourceAllocations']:
-            resource_allocations.append(ResourceAllocation(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.resourceAllocations)['resourceAllocations']:
+            resource_allocations.append(ResourceAllocation(json_rep, self.rest_client))
         return resource_allocations
 
     def __str__(self):
@@ -397,9 +416,9 @@ class ActiveVersion(object):
         return pformat(self.__dict__)
 
 
-class Domain(StreamsRestClient):
-    def __init__(self, json_domain, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class Domain:
+    def __init__(self, json_domain, rest_client):
+        self.rest_client=rest_client
         for key in json_domain:
             if key == 'self':
                 self.__dict__["rest_self"] = json_domain['self']
@@ -412,47 +431,47 @@ class Domain(StreamsRestClient):
 
     def get_instances(self):
         instances = []
-        for json_instance in self.make_request(self.instances)['instances']:
-            instances.append(Instance(json_instance, self.rest_connection))
+        for json_instance in self.rest_client.make_request(self.instances)['instances']:
+            instances.append(Instance(json_instance, self.rest_client))
         return instances
 
     def get_hosts(self):
         hosts = []
-        for json_rep in self.make_request(self.hosts)['hosts']:
-            hosts.append(Host(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.hosts)['hosts']:
+            hosts.append(Host(json_rep, self.rest_client))
         return hosts
 
     def get_active_services(self):
         active_services = []
-        for json_rep in self.make_request(self.activeServices)['activeServices']:
-            active_services.append(ActiveService(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.activeServices)['activeServices']:
+            active_services.append(ActiveService(json_rep, self.rest_client))
         return active_services
 
     def get_resource_allocations(self):
         resource_allocations = []
-        for json_rep in self.make_request(self.resourceAllocations)['resourceAllocations']:
-            resource_allocations.append(ResourceAllocation(json_rep, self.rest_connection))
+        for json_rep in self.rest_client.make_request(self.resourceAllocations)['resourceAllocations']:
+            resource_allocations.append(ResourceAllocation(json_rep, self.rest_client))
         return resource_allocations
 
     def get_resources(self):
         resources = []
-        json_resources = self.make_request(self.resource_url)['resources']
+        json_resources = self.rest_client.make_request(self.resource_url)['resources']
         for json_resource in json_resources:
-            resources.append(Resource(json_resource, self.rest_connection))
+            resources.append(Resource(json_resource, self.rest_client))
         return resources
 
     def __str__(self):
         return pformat(self.__dict__)
 
 
-class Resource(StreamsRestClient):
-    def __init__(self, json_resource, rest_connection):
-        StreamsRestClient.__init__(self, rest_connection)
+class Resource:
+    def __init__(self, json_resource, rest_client):
+        self.rest_client=rest_client
         self.name = json_resource['name']
         self.resource = json_resource['resource']
 
     def get_resource(self):
-        return self.make_request(self.resource)
+        return self.rest_client.make_request(self.resource)
 
     def __str__(self):
         return pformat(self.__dict__)

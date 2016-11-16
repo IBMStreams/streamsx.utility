@@ -6,58 +6,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import json
 
-from .rest_primitives import Domain, Instance, Installation, Resource
+from .rest_primitives import Domain, Instance, Installation, Resource, StreamsRestClient
 from pprint import pformat
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 
-class StreamsRestConnection(object):
-    """
-    A StreamsRestClient provides convenience methods for connecting to the Streams REST API.
-    """
-
-    def __init__(self, username=None, password=None, session=None):
-        # Create session to reuse TCP connection
-        if session is None:
-            # https authentication
-            self._username = username
-            self._password = password
-
-            session = requests.Session()
-            session.auth = (username, password)
-            session.verify = False
-        else:
-            self._username = session.auth[0]
-            self._password = session.auth[1]
-
-        self.session = session
-
-    @classmethod
-    def from_session(cls, _session):
-        return cls(session=_session)
-
-    @classmethod
-    def from_login(cls, _username, _password):
-        return cls(username=_username, password=_password)
-
-
-class StreamsRestClient(object):
-    def __init__(self, rest_connection):
-        self.rest_connection = rest_connection
-
-    def make_request(self, url):
-        return self.rest_connection.session.get(url).json()
-
-    def __str__(self):
-        return pformat(self.__dict__)
-
-
-class StreamsContext(StreamsRestClient):
+class StreamsContext:
     def __init__(self, username, password, resource_url):
-        rest_connection = StreamsRestConnection.from_login(username, password)
-        StreamsRestClient.__init__(self, rest_connection)
+        self.rest_client = StreamsRestClient(username, password)
         self.resource_url = resource_url
 
     def get_domains(self):
@@ -66,7 +24,7 @@ class StreamsContext(StreamsRestClient):
             # Get list of domains
             if resource.name == "domains":
                 for json_domain in resource.get_resource()['domains']:
-                    domains.append(Domain(json_domain, self.rest_connection))
+                    domains.append(Domain(json_domain, self.rest_client))
         return domains
 
     def get_instances(self):
@@ -75,7 +33,7 @@ class StreamsContext(StreamsRestClient):
             # Get list of domains
             if resource.name == "instances":
                 for json_rep in resource.get_resource()['instances']:
-                    instances.append(Instance(json_rep, self.rest_connection))
+                    instances.append(Instance(json_rep, self.rest_client))
         return instances
 
     def get_installations(self):
@@ -84,14 +42,14 @@ class StreamsContext(StreamsRestClient):
             # Get list of domains
             if resource.name == "installations":
                 for json_rep in resource.get_resource()['installations']:
-                    installations.append(Installation(json_rep, self.rest_connection))
+                    installations.append(Installation(json_rep, self.rest_client))
         return installations
 
     def get_resources(self):
         resources = []
-        json_resources = self.make_request(self.resource_url)['resources']
+        json_resources = self.rest_client.make_request(self.resource_url)['resources']
         for json_resource in json_resources:
-            resources.append(Resource(json_resource, self.rest_connection))
+            resources.append(Resource(json_resource, self.rest_client))
         return resources
 
     def __str__(self):
