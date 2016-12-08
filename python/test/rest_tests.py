@@ -3,28 +3,14 @@ import json
 import logging
 import subprocess
 import unittest
-import time
+from test_operators import DelayedTupleSourceWithLastTuple
 
 from streamsx import rest
 from streamsx.topology import topology, context
 
 credentials_file_name = 'sws_credentials.json'
 
-
-class DelayedTupleSource:
-    """
-    The delay is needed, since it can take longer than ten seconds for the REST API to find a particular view, by
-    which time the tuple has already passed.
-    """
-    def __init__(self, val):
-        self.val = val
-
-    def __call__(self):
-        time.sleep(10)
-        return self.val
-
 class TestRestFeatures(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         """
@@ -66,13 +52,18 @@ class TestRestFeatures(unittest.TestCase):
     def test_basic_view_support(self):
         top = topology.Topology('basicViewTest')
         # Send only one tuple
-        view = top.source(DelayedTupleSource('hello')).view()
+        stream = top.source(DelayedTupleSourceWithLastTuple(['hello'], 30))
+        view =stream.view()
+        stream.print()
         self.logger.debug("Begging compilation and submission of basic_view_support topology.")
         context.submit(context.ContextTypes.DISTRIBUTED, top, username = self.sws_username, password=self.sws_password)
 
         queue = view.start_data_fetch()
-        view_tuple_value = queue.get()['val']
+        view_tuple_value = queue.get()
+
+        # Needed due to view tuple granularity defect.
+        end_tuple = queue.get()
         view.stop_data_fetch()
 
         self.logger.debug("Returned view value in basic_view_support is " + view_tuple_value)
-        self.assertEquals(view_tuple_value, 'hello')
+        self.assertTrue(view_tuple_value.startswith('hello'))

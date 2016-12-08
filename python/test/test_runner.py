@@ -1,5 +1,6 @@
 import logging
 import unittest
+import subprocess
 import sys, os
 from os.path import dirname
 
@@ -17,3 +18,5 @@ if __name__ == '__main__':
     # Search for valid test suites.
     suite = unittest.TestLoader().discover('.', pattern='*tests.py')
     unittest.TextTestRunner(verbosity=4).run(suite)
+
+    #subprocess.call(["st canceljob $(st lsjobs | tail -n +3| cut -d' ' -f 3|tr '\n' ' ')"])

@@ -54,6 +54,7 @@ class View:
         view_items = []
         for json_view_items in self.rest_client.make_request(self.viewItems)['viewItems']:
             view_items.append(ViewItem(json_view_items, self.rest_client))
+        logger.debug("Retrieved " + str(len(view_items)) + " items from view " + self.name)
         return view_items
 
     def __str__(self):
