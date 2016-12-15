@@ -9,7 +9,7 @@ from streamsx import rest
 from streamsx.topology import topology, context
 
 credentials_file_name = 'sws_credentials.json'
-
+logger = logging.getLogger('streamsx.test.rest_test')
 class TestRestFeatures(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -17,7 +17,7 @@ class TestRestFeatures(unittest.TestCase):
         Initialize the logger and get the SWS username, password, and REST URL.
         :return: None
         """
-        cls.logger = logging.getLogger('streamsx.test.rest_test')
+        cls.logger = logger
 
         # Get credentials from creds file.
         creds_file = open(credentials_file_name, mode='r')
@@ -52,9 +52,7 @@ class TestRestFeatures(unittest.TestCase):
     def test_basic_view_support(self):
         top = topology.Topology('basicViewTest')
         # Send only one tuple
-        stream = top.source(DelayedTupleSourceWithLastTuple(['hello'], 30))
-        view =stream.view()
-        stream.print()
+        view = top.source(DelayedTupleSourceWithLastTuple(['hello'], 10)).view()
         self.logger.debug("Begging compilation and submission of basic_view_support topology.")
         context.submit(context.ContextTypes.DISTRIBUTED, top, username = self.sws_username, password=self.sws_password)
 
@@ -67,3 +65,14 @@ class TestRestFeatures(unittest.TestCase):
 
         self.logger.debug("Returned view value in basic_view_support is " + view_tuple_value)
         self.assertTrue(view_tuple_value.startswith('hello'))
+
+
+def get_raw_jobs():
+    stdout, stderr = subprocess.Popen(['streamtool', 'lsjobs'], stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+    stdout = stdout.decode().strip()
+    stderr = stderr.decode().strip()
+    if stderr != '':
+        raise RuntimeError("Failed to execute \"streamtool getjob\": \n" + stderr)
+    print(stdout)
+
+get_raw_jobs()

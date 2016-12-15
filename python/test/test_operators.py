@@ -14,15 +14,11 @@ class DelayedTupleSourceWithLastTuple:
         self.delay = delay
 
     def __call__(self):
-        #print("Here 1", flush = True)
         time.sleep(self.delay)
         for tup in self.tuples:
-            #print("Here 2", flush = True)
             yield tup
 
         # send a last tuple as part of the view REST API workaround
         # TODO: remove when fix is delivered.
-        #print("Here 3", flush=True)
         time.sleep(2)
         yield self.tuples[0]
-        #print("Here 4", flush=True)
