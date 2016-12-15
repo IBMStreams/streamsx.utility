@@ -65,14 +65,3 @@ class TestRestFeatures(unittest.TestCase):
 
         self.logger.debug("Returned view value in basic_view_support is " + view_tuple_value)
         self.assertTrue(view_tuple_value.startswith('hello'))
-
-
-def get_raw_jobs():
-    stdout, stderr = subprocess.Popen(['streamtool', 'lsjobs'], stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
-    stdout = stdout.decode().strip()
-    stderr = stderr.decode().strip()
-    if stderr != '':
-        raise RuntimeError("Failed to execute \"streamtool getjob\": \n" + stderr)
-    print(stdout)
-
-get_raw_jobs()
