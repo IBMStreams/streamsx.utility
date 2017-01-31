@@ -43,7 +43,7 @@ class TestRestFeatures(unittest.TestCase):
         self.assertTrue('streamsx.utility' in rest.__file__)
 
     def test_username_and_password(self):
-        # Ensure, at minimun, that the StreamsContext can connect and retrieve valid data from the SWS resources path
+        # Ensure, at minimum, that the StreamsContext can connect and retrieve valid data from the SWS resources path
         ctxt = rest.StreamsContext(self.sws_username, self.sws_password, self.sws_rest_api_url)
         resources = ctxt.get_resources()
         self.logger.debug("Number of retrieved resources is: " + str(len(resources)))
@@ -52,16 +52,18 @@ class TestRestFeatures(unittest.TestCase):
     def test_basic_view_support(self):
         top = topology.Topology('basicViewTest')
         # Send only one tuple
-        view = top.source(DelayedTupleSourceWithLastTuple(['hello'], 10)).view()
+        view = top.source(DelayedTupleSourceWithLastTuple(['hello'], 20)).view()
         self.logger.debug("Begging compilation and submission of basic_view_support topology.")
         context.submit(context.ContextTypes.DISTRIBUTED, top, username = self.sws_username, password=self.sws_password)
 
         queue = view.start_data_fetch()
-        view_tuple_value = queue.get()
 
-        # Needed due to view tuple granularity defect.
-        end_tuple = queue.get()
-        view.stop_data_fetch()
+        try:
+            view_tuple_value = queue.get(block=True, timeout=20.0)
+        except:
+            view.stop_data_fetch()
+            logger.exception("Timed out while waiting for tuple.")
+            raise
 
         self.logger.debug("Returned view value in basic_view_support is " + view_tuple_value)
         self.assertTrue(view_tuple_value.startswith('hello'))
