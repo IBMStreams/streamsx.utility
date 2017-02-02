@@ -81,9 +81,11 @@ class StreamsContext:
         return views
 
     def retrieve_view(self, name):
-        for view in self.retrieve_views():
-            if view.name == name:
-                return view
+        for domain in self.get_domains():
+            for instance in domain.get_instances():
+                for view in instance.get_views():
+                    if view.name == name:
+                        return view
         raise ViewNotFoundError("Could not locate view: " + name)
 
     def __str__(self):
