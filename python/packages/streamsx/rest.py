@@ -6,6 +6,7 @@ import json
 import logging
 
 from .rest_primitives import Domain, Instance, Installation, Resource, StreamsRestClient
+from .rest_errors import ViewNotFoundError
 from pprint import pformat
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
@@ -71,16 +72,22 @@ class StreamsContext:
             resources.append(Resource(json_resource, self.rest_client))
         return resources
 
+    def retrieve_views(self):
+        views = []
+        for domain in self.get_domains():
+            for instance in domain.get_instances():
+                for view in instance.get_views():
+                    views.append(view)
+        return views
+
+    def retrieve_view(self, name):
+        for view in self.retrieve_views():
+            if view.name == name:
+                return view
+        raise ViewNotFoundError("Could not locate view: " + name)
+
     def __str__(self):
         return pformat(self.__dict__)
-
-def get_view_obj(_view, rc):
-    for domain in rc.get_domains():
-        for instance in domain.get_instances():
-            for view in instance.get_views():
-                if view.name == _view.name:
-                    return view
-    return None
 
 
 class VcapUtils(object):
@@ -145,6 +152,7 @@ class VcapUtils(object):
         rest_api_url = response['streams_rest_url'] + '/resources'
         return rest_api_url
 
+
 class ConfigParams(object):
     """
     Configuration options which may be used as keys in the config parameter of the StreamsContext constructor.
@@ -154,3 +162,4 @@ class ConfigParams(object):
     """
     VCAP_SERVICES = 'topology.service.vcap'
     SERVICE_NAME = 'topology.service.name'
+
