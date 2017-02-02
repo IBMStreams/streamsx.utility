@@ -7,7 +7,7 @@ import unittest
 from test_operators import DelayedTupleSourceWithLastTuple
 
 from streamsx import rest
-from streamsx.topology import topology, context
+from streamsx.topology import topology, schema
 
 credentials_file_name = 'sws_credentials.json'
 vcap_service_config_file_name = 'vcap_service_config.json'
@@ -41,21 +41,25 @@ class CommonTests(unittest.TestCase):
         self.logger.debug("Beginning test: test_basic_view_support.")
         top = topology.Topology('basicViewTest')
         # Send only one tuple
-        view = top.source(DelayedTupleSourceWithLastTuple(['hello'], 20)).view()
+        stream = top.source(DelayedTupleSourceWithLastTuple(['hello'], 20))
+        view = stream.view()
+
+        # Temporary workaround for Bluemix TLS issue with views
+        stream.publish(schema=schema.CommonSchema.String, topic="__test_topic::test_basic_view_support")
+
         self.logger.debug("Begging compilation and submission of basic_view_support topology.")
 
         self._submit(top)
 
-        time.sleep(10)
-
+        time.sleep(5)
         queue = view.start_data_fetch()
 
         try:
             view_tuple_value = queue.get(block=True, timeout=20.0)
         except:
-            view.stop_data_fetch()
             logger.exception("Timed out while waiting for tuple.")
             raise
-
+        finally:
+            view.stop_data_fetch()
         self.logger.debug("Returned view value in basic_view_support is " + view_tuple_value)
         self.assertTrue(view_tuple_value.startswith('hello'))
