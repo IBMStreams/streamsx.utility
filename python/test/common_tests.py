@@ -22,7 +22,7 @@ class CommonTests(unittest.TestCase):
         :return: None
         """
         if cls is CommonTests:
-            raise unittest.SkipTest("Skip CommonTests, it's a base class")
+            raise unittest.SkipTest("Skipping base tests.")
 
     def test_ensure_correct_rest_module(self):
         self.logger.debug("Beginning test: test_ensure_correct_rest_module.")

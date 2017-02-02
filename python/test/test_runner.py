@@ -12,7 +12,7 @@ if __name__ == '__main__':
 
     # Set up a logging framework. Test output from streams.test.* will percolate up to the streamsx.test logger
     # and be output on stdout.
-    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+    logging.basicConfig(stream=sys.stderr)
     logging.getLogger('streamsx').setLevel(logging.DEBUG)
 
     # Search for valid test suites.
@@ -25,13 +25,12 @@ if __name__ == '__main__':
         suite = unittest.TestLoader().discover('.', pattern='*tests.py')
 
     elif mode == "local":
+        # Run only local tests
         suite = unittest.TestLoader().discover('.', pattern='*local_tests.py')
 
     elif mode == "bluemix":
+        # Run only Bluemix tests
         suite = unittest.TestLoader().discover('.', pattern='*bluemix_tests.py')
-        for test in suite:
-            print(str(test))
-
 
     else:
         raise ValueError("'" + mode + "' is an invalid argument to test_runner.")

@@ -36,41 +36,18 @@ class StreamsRestClient(object):
         return pformat(self.__dict__)
 
 
-class View(threading.Thread):
-    def __init__(self, json_view, rest_client):
-        super(View, self).__init__()
-        self.rest_client = rest_client
-        for key in json_view:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_view['self']
-            else:
-                self.__dict__[key] = json_view[key]
-
-        self._stop = threading.Event()
+class ViewThread(threading.Thread):
+    """
+    A thread which, when invoked, begins fetching data from the supplied view and populates the View.items queue.
+    """
+    def __init__(self, view):
+        super(ViewThread, self).__init__()
+        self.view = view
+        self.stop = threading.Event()
         self.items = queue.Queue()
-
-        self.streams_context_config = {'username': '', 'password': '', 'rest_api_url': ''}
 
         self._last_collection_time = -1
         self._last_collection_time_count = 0
-
-    def get_domain(self):
-        return Domain(self.rest_client.make_request(self.domain), self.rest_client)
-
-    def get_instance(self):
-        return Instance(self.rest_client.make_request(self.instance), self.rest_client)
-
-    def get_job(self):
-        return Job(self.rest_client.make_request(self.job), self.rest_client)
-
-    def stop_data_fetch(self):
-        self._stop.set()
-
-    def start_data_fetch(self):
-        self._stop.clear()
-        t = threading.Thread(target=self)
-        t.start()
-        return self.items
 
     def __call__(self):
         while not self._stopped():
@@ -82,17 +59,15 @@ class View(threading.Thread):
 
     def get_view_items(self):
         view_items = []
-        for json_view_items in self.rest_client.make_request(self.viewItems)['viewItems']:
-            view_items.append(ViewItem(json_view_items, self.rest_client))
-        logger.debug("Retrieved " + str(len(view_items)) + " items from view " + self.name)
+        for json_view_items in self.view.rest_client.make_request(self.view.viewItems)['viewItems']:
+            view_items.append(ViewItem(json_view_items, self.view.rest_client))
+        logger.debug("Retrieved " + str(len(view_items)) + " items from view " + self.view.name)
         return view_items
 
     def _get_deduplicated_view_items(self):
         # Retrieve the view object
-        view = self
-
-        data_name = view.attributes[0]['name']
-        items = view.get_view_items()
+        data_name = self.view.attributes[0]['name']
+        items = self.get_view_items()
         data = []
 
         # The number of already seen tuples to ignore on the last millisecond time boundary
@@ -128,7 +103,36 @@ class View(threading.Thread):
         return data
 
     def _stopped(self):
-        return self._stop.isSet()
+        return self.stop.isSet()
+
+class View(object):
+    def __init__(self, json_view, rest_client):
+        self.rest_client = rest_client
+        for key in json_view:
+            if key == 'self':
+                self.__dict__["rest_self"] = json_view['self']
+            else:
+                self.__dict__[key] = json_view[key]
+
+        self.view_thread = ViewThread(self)
+
+    def get_domain(self):
+        return Domain(self.rest_client.make_request(self.domain), self.rest_client)
+
+    def get_instance(self):
+        return Instance(self.rest_client.make_request(self.instance), self.rest_client)
+
+    def get_job(self):
+        return Job(self.rest_client.make_request(self.job), self.rest_client)
+
+    def stop_data_fetch(self):
+        self.view_thread.stop.set()
+
+    def start_data_fetch(self):
+        self.view_thread.stop.clear()
+        t = threading.Thread(target=self.view_thread)
+        t.start()
+        return self.view_thread.items
 
     def __str__(self):
         return pformat(self.__dict__)
