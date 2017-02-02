@@ -13,7 +13,6 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 logger = logging.getLogger('streamsx.rest')
 
-
 class StreamsContext:
     def __init__(self, username=None, password=None, resource_url=None, config=None):
         # manually specify username, password, and resource_url
@@ -23,18 +22,11 @@ class StreamsContext:
 
         # Connect to Bluemix service using VCAP
         elif config:
-            vcap_services = StreamsContext._get_vcap_services(config)
-            credentials = StreamsContext._get_credentials(config, vcap_services)
+            vcap_services = VcapUtils.get_vcap_services(config)
+            credentials = VcapUtils.get_credentials(config, vcap_services)
 
             # Obtain the streams SWS REST URL
-            resources_url = credentials['rest_url'] + credentials['resources_path']
-            try:
-                response = requests.get(resources_url, auth=(username, password)).json()
-            except:
-                logger.exception("Error while retrieving SWS REST url from: " + resources_url)
-                raise
-
-            rest_api_url = response['streams_rest_url'] + '/resources'
+            rest_api_url = VcapUtils.get_rest_api_url_from_creds(credentials)
 
             # Create rest connection to remote Bluemix SWS
             self.rest_client = StreamsRestClient(credentials['userid'], credentials['password'], rest_api_url)
@@ -82,8 +74,18 @@ class StreamsContext:
     def __str__(self):
         return pformat(self.__dict__)
 
+def get_view_obj(_view, rc):
+    for domain in rc.get_domains():
+        for instance in domain.get_instances():
+            for view in instance.get_views():
+                if view.name == _view.name:
+                    return view
+    return None
+
+
+class VcapUtils(object):
     @staticmethod
-    def _get_vcap_services(config):
+    def get_vcap_services(config):
         # Attempt to retrieve from config
         try:
             vs = config[ConfigParams.VCAP_SERVICES]
@@ -111,7 +113,7 @@ class StreamsContext:
         return vs
 
     @staticmethod
-    def _get_credentials(config, vcap_services):
+    def get_credentials(config, vcap_services):
         # Get the credentials for the selected service, from VCAP_SERVICES config param
         try:
             service_name = config[ConfigParams.SERVICE_NAME]
@@ -131,15 +133,17 @@ class StreamsContext:
             raise ValueError("Streaming Analytics service " + service_name + " was not found in VCAP_SERVICES")
         return creds
 
+    @staticmethod
+    def get_rest_api_url_from_creds(credentials):
+        resources_url = credentials['rest_url'] + credentials['resources_path']
+        try:
+            response = requests.get(resources_url, auth=(credentials['userid'], credentials['password'])).json()
+        except:
+            logger.exception("Error while retrieving SWS REST url from: " + resources_url)
+            raise
 
-def get_view_obj(_view, rc):
-    for domain in rc.get_domains():
-        for instance in domain.get_instances():
-            for view in instance.get_views():
-                if view.name == _view.name:
-                    return view
-    return None
-
+        rest_api_url = response['streams_rest_url'] + '/resources'
+        return rest_api_url
 
 class ConfigParams(object):
     """

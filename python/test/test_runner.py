@@ -16,7 +16,26 @@ if __name__ == '__main__':
     logging.getLogger('streamsx').setLevel(logging.DEBUG)
 
     # Search for valid test suites.
-    suite = unittest.TestLoader().discover('.', pattern='*tests.py')
+    if len(sys.argv) < 2:
+        raise ValueError("Please provide either 'all', 'local', or 'bluemix' as an argument")
+
+    mode = sys.argv[1]
+    if mode == "all":
+        # Run all tests
+        suite = unittest.TestLoader().discover('.', pattern='*tests.py')
+
+    elif mode == "local":
+        suite = unittest.TestLoader().discover('.', pattern='*local_tests.py')
+
+    elif mode == "bluemix":
+        suite = unittest.TestLoader().discover('.', pattern='*bluemix_tests.py')
+        for test in suite:
+            print(str(test))
+
+
+    else:
+        raise ValueError("'" + mode + "' is an invalid argument to test_runner.")
+
     unittest.TextTestRunner(verbosity=4).run(suite)
 
     #subprocess.call(["st canceljob $(st lsjobs | tail -n +3| cut -d' ' -f 3|tr '\n' ' ')"])

@@ -12,7 +12,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-logger = logging.getLogger('streamsx.rest_primitives')
+logger = logging.getLogger('streamsx.rest')
 
 class StreamsRestClient(object):
     def __init__(self, username, password, resource_url):
