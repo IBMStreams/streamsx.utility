@@ -14,7 +14,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 logger = logging.getLogger('streamsx.rest')
 
-class StreamsContext:
+class StreamsConnection:
     def __init__(self, username=None, password=None, resource_url=None, config=None):
         # manually specify username, password, and resource_url
         if username and password and resource_url:
