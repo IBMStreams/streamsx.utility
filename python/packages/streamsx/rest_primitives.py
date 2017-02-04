@@ -14,6 +14,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 logger = logging.getLogger('streamsx.rest')
 
+
 class _ResourceElement(object):
     """A class whose fields are populated by the JSON returned from a REST call.
     """
@@ -31,6 +32,7 @@ class _ResourceElement(object):
 
     def __str__(self):
         return pformat(self.__dict__)
+
 
 class StreamsRestClient(object):
     """Handles the session connection with the Streams REST API.
@@ -125,19 +127,13 @@ class ViewThread(threading.Thread):
     def _stopped(self):
         return self.stop.isSet()
 
+
 class View(_ResourceElement):
     """The view element resource provides access to information about a view that is associated with an active job, and
     exposes methods to retrieve data from the View's Stream.
     """
     def __init__(self, json_view, rest_client):
-        super(View, self).__init__()
-        self.rest_client = rest_client
-        for key in json_view:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_view['self']
-            else:
-                self.__dict__[key] = json_view[key]
-
+        super(View, self).__init__(json_view, rest_client)
         self.view_thread = ViewThread(self)
 
     def get_domain(self):
@@ -165,9 +161,6 @@ class View(_ResourceElement):
         logger.debug("Retrieved " + str(len(view_items)) + " items from view " + self.name)
         return view_items
 
-    def __str__(self):
-        return pformat(self.__dict__)
-
 class ActiveView(_ResourceElement):
     """
     The deprecated active view element resource provides access to information about a view that is active.
@@ -180,6 +173,7 @@ class ViewItem(_ResourceElement):
     Represents the data of a tuple, it's type, and the time when it was collected from the stream.
     """
     pass
+
 
 class ConfiguredView(_ResourceElement):
     """
@@ -451,9 +445,11 @@ class Domain(_ResourceElement):
             resources.append(Resource(json_resource, self.rest_client))
         return resources
 
+
 class Resource(_ResourceElement):
     def get_resource(self):
         return self.rest_client.make_request(self.resource)
+
 
 def get_view_obj(_view, rc):
     for domain in rc.get_domains():
