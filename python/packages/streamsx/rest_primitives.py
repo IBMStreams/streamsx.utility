@@ -14,7 +14,35 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 logger = logging.getLogger('streamsx.rest')
 
+class _ResourceElement(object):
+    """A class whose fields are populated by the JSON returned from a REST call.
+    """
+    def __init__(self, json_rep, rest_client):
+        """
+        :param json_rep: The JSON response from a REST call.
+        :param rest_client: The client used to make the REST call.
+        """
+        self.rest_client=rest_client
+        for key in json_rep:
+            if key == 'self':
+                self.__dict__["rest_self"] = json_rep['self']
+            else:
+                self.__dict__[key] = json_rep[key]
+
+    def __str__(self):
+        return pformat(self.__dict__)
+
 class StreamsRestClient(object):
+    """Handles the session connection with the Streams REST API.
+
+    :param username: The username of an authorized Streams user.
+    :type username: str.
+    :param password: The password associated with the username.
+    :type password: str.
+    :param resource_url: The resource endpoint of the instance. Can be found with `st geturl --api` for local Streams
+    installs.
+    :type resource_url: str.
+    """
     def __init__(self, username, password, resource_url):
         self.resource_url = resource_url
         # Create session to reuse TCP connection
@@ -37,8 +65,7 @@ class StreamsRestClient(object):
 
 
 class ViewThread(threading.Thread):
-    """
-    A thread which, when invoked, begins fetching data from the supplied view and populates the View.items queue.
+    """A thread which, when invoked, begins fetching data from the supplied view and populates the `View.items` queue.
     """
     def __init__(self, view):
         super(ViewThread, self).__init__()
@@ -57,17 +84,10 @@ class ViewThread(threading.Thread):
                 for itm in _items:
                     self.items.put(itm)
 
-    def get_view_items(self):
-        view_items = []
-        for json_view_items in self.view.rest_client.make_request(self.view.viewItems)['viewItems']:
-            view_items.append(ViewItem(json_view_items, self.view.rest_client))
-        logger.debug("Retrieved " + str(len(view_items)) + " items from view " + self.view.name)
-        return view_items
-
     def _get_deduplicated_view_items(self):
         # Retrieve the view object
         data_name = self.view.attributes[0]['name']
-        items = self.get_view_items()
+        items = self.view.get_view_items()
         data = []
 
         # The number of already seen tuples to ignore on the last millisecond time boundary
@@ -106,6 +126,8 @@ class ViewThread(threading.Thread):
         return self.stop.isSet()
 
 class View(object):
+    """The view resource. Exposes methods to retrieve data from the View's Stream.
+    """
     def __init__(self, json_view, rest_client):
         self.rest_client = rest_client
         for key in json_view:
@@ -144,17 +166,8 @@ class View(object):
     def __str__(self):
         return pformat(self.__dict__)
 
-class ActiveView:
-    def __init__(self, json_rep, rest_client):
-        self.rest_client=rest_client
-        for key in json_rep:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_rep['self']
-            else:
-                self.__dict__[key] = json_rep[key]
-
-    def __str__(self):
-        return pformat(self.__dict__)
+class ActiveView(_ResourceElement):
+    pass
 
 
 class ViewItem:
@@ -170,41 +183,15 @@ class ViewItem:
         return pformat(self.__dict__)
 
 
-class ConfiguredView:
-    def __init__(self, json_rep, rest_client):
-        self.rest_client=rest_client
-        for key in json_rep:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_rep['self']
-            else:
-                self.__dict__[key] = json_rep[key]
-
-    def __str__(self):
-        return pformat(self.__dict__)
+class ConfiguredView(_ResourceElement):
+    pass
 
 
-class Host:
-    def __init__(self, json_rep, rest_client):
-        self.rest_client=rest_client
-        for key in json_rep:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_rep['self']
-            else:
-                self.__dict__[key] = json_rep[key]
-
-    def __str__(self):
-        return pformat(self.__dict__)
+class Host(_ResourceElement):
+    pass
 
 
-class Job:
-    def __init__(self, json_rep, rest_client):
-        self.rest_client=rest_client
-        for key in json_rep:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_rep['self']
-            else:
-                self.__dict__[key] = json_rep[key]
-
+class Job(_ResourceElement):
     def get_views(self):
         views = []
         for json_view in self.rest_client.make_request(self.views)['views']:
@@ -259,138 +246,44 @@ class Job:
             resource_allocations.append(ResourceAllocation(json_rep, self.rest_client))
         return resource_allocations
 
-    def __str__(self):
-        return pformat(self.__dict__)
+
+class Operator(_ResourceElement):
+    pass
 
 
-class Operator:
-    def __init__(self, json_rep, rest_client):
-        self.rest_client=rest_client
-        for key in json_rep:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_rep['self']
-            else:
-                self.__dict__[key] = json_rep[key]
-
-    def __str__(self):
-        return pformat(self.__dict__)
+class OperatorConnection(_ResourceElement):
+    pass
 
 
-class OperatorConnection:
-    def __init__(self, json_rep, rest_client):
-        self.rest_client=rest_client
-        for key in json_rep:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_rep['self']
-            else:
-                self.__dict__[key] = json_rep[key]
-
-    def __str__(self):
-        return pformat(self.__dict__)
+class PE(_ResourceElement):
+    pass
 
 
-class PE:
-    def __init__(self, json_rep, rest_client):
-        self.rest_client=rest_client
-        for key in json_rep:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_rep['self']
-            else:
-                self.__dict__[key] = json_rep[key]
-
-    def __str__(self):
-        return pformat(self.__dict__)
+class PEConnection(_ResourceElement):
+    pass
 
 
-class PEConnection:
-    def __init__(self, json_rep, rest_client):
-        self.rest_client=rest_client
-        for key in json_rep:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_rep['self']
-            else:
-                self.__dict__[key] = json_rep[key]
-
-    def __str__(self):
-        return pformat(self.__dict__)
+class ResourceAllocation(_ResourceElement):
+    pass
 
 
-class ResourceAllocation:
-    def __init__(self, json_rep, rest_client):
-        self.rest_client=rest_client
-        for key in json_rep:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_rep['self']
-            else:
-                self.__dict__[key] = json_rep[key]
-
-    def __str__(self):
-        return pformat(self.__dict__)
+class ActiveService(_ResourceElement):
+    pass
 
 
-class ActiveService:
-    def __init__(self, json_rep, rest_client):
-        self.rest_client=rest_client
-        for key in json_rep:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_rep['self']
-            else:
-                self.__dict__[key] = json_rep[key]
-
-    def __str__(self):
-        return pformat(self.__dict__)
+class Installation(_ResourceElement):
+    pass
 
 
-class Installation:
-    def __init__(self, json_rep, rest_client):
-        self.rest_client=rest_client
-        for key in json_rep:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_rep['self']
-            else:
-                self.__dict__[key] = json_rep[key]
-
-    def __str__(self):
-        return pformat(self.__dict__)
+class ImportedStream(_ResourceElement):
+    pass
 
 
-class ImportedStream:
-    def __init__(self, json_rep, rest_client):
-        self.rest_client=rest_client
-        for key in json_rep:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_rep['self']
-            else:
-                self.__dict__[key] = json_rep[key]
-
-    def __str__(self):
-        return pformat(self.__dict__)
+class ExportedStream(_ResourceElement):
+    pass
 
 
-class ExportedStream:
-    def __init__(self, json_rep, rest_client):
-        self.rest_client=rest_client
-        for key in json_rep:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_rep['self']
-            else:
-                self.__dict__[key] = json_rep[key]
-
-    def __str__(self):
-        return pformat(self.__dict__)
-
-
-class Instance:
-    def __init__(self, json_domain, rest_client):
-        self.rest_client=rest_client
-        for key in json_domain:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_domain['self']
-            else:
-                self.__dict__[key] = json_domain[key]
-
-        self.active_version = ActiveVersion(json_domain['activeVersion'])
-
+class Instance(_ResourceElement):
     def get_operators(self):
         operators = []
         for json_rep in self.rest_client.make_request(self.operators)['operators']:
@@ -472,9 +365,6 @@ class Instance:
             resource_allocations.append(ResourceAllocation(json_rep, self.rest_client))
         return resource_allocations
 
-    def __str__(self):
-        return pformat(self.__dict__)
-
 
 class ResourceTag(object):
     def __init__(self, json_resource_tag):
@@ -504,19 +394,7 @@ class ActiveVersion(object):
         return pformat(self.__dict__)
 
 
-class Domain:
-    def __init__(self, json_domain, rest_client):
-        self.rest_client=rest_client
-        for key in json_domain:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_domain['self']
-            self.__dict__[key] = json_domain[key]
-
-        self.activeVersion = ActiveVersion(json_domain['activeVersion'])
-        self.resourceTags = []
-        for _json_resource_tag in json_domain['resourceTags']:
-            self.resourceTags.append(ResourceTag(_json_resource_tag))
-
+class Domain(_ResourceElement):
     def get_instances(self):
         instances = []
         for json_instance in self.rest_client.make_request(self.instances)['instances']:
@@ -548,22 +426,16 @@ class Domain:
             resources.append(Resource(json_resource, self.rest_client))
         return resources
 
-    def __str__(self):
-        return pformat(self.__dict__)
+    def get_resources(self):
+        resources = []
+        json_resources = self.rest_client.make_request(self.resource_url)['resources']
+        for json_resource in json_resources:
+            resources.append(Resource(json_resource, self.rest_client))
+        return resources
 
-
-class Resource:
-    def __init__(self, json_resource, rest_client):
-        self.rest_client=rest_client
-        self.name = json_resource['name']
-        self.resource = json_resource['resource']
-
+class Resource(_ResourceElement):
     def get_resource(self):
         return self.rest_client.make_request(self.resource)
-
-    def __str__(self):
-        return pformat(self.__dict__)
-
 
 def get_view_obj(_view, rc):
     for domain in rc.get_domains():

@@ -32,7 +32,7 @@ class CommonTests(unittest.TestCase):
     def test_username_and_password(self):
         self.logger.debug("Beginning test: test_username_and_password.")
         # Ensure, at minimum, that the StreamsContext can connect and retrieve valid data from the SWS resources path
-        ctxt = rest.StreamsContext(self.sws_username, self.sws_password, self.sws_rest_api_url)
+        ctxt = rest.StreamsConnection(self.sws_username, self.sws_password, self.sws_rest_api_url)
         resources = ctxt.get_resources()
         self.logger.debug("Number of retrieved resources is: " + str(len(resources)))
         self.assertGreater(len(resources), 0, msg="Returned zero resources from the \"resources\" endpoint.")

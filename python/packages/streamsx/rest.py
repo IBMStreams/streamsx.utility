@@ -135,6 +135,13 @@ class StreamsConnection:
                         return view
         raise ViewNotFoundError("Could not locate view: " + name)
 
+    def get_resources(self):
+        resources = []
+        json_resources = self.rest_client.make_request(self.resource_url)['resources']
+        for json_resource in json_resources:
+            resources.append(Resource(json_resource, self.rest_client))
+        return resources
+
     def __str__(self):
         return pformat(self.__dict__)
 
