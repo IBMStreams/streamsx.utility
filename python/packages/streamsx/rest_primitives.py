@@ -125,10 +125,12 @@ class ViewThread(threading.Thread):
     def _stopped(self):
         return self.stop.isSet()
 
-class View(object):
-    """The view resource. Exposes methods to retrieve data from the View's Stream.
+class View(_ResourceElement):
+    """The view element resource provides access to information about a view that is associated with an active job, and
+    exposes methods to retrieve data from the View's Stream.
     """
     def __init__(self, json_view, rest_client):
+        super(View, self).__init__()
         self.rest_client = rest_client
         for key in json_view:
             if key == 'self':
@@ -167,31 +169,35 @@ class View(object):
         return pformat(self.__dict__)
 
 class ActiveView(_ResourceElement):
+    """
+    The deprecated active view element resource provides access to information about a view that is active.
+    """
     pass
 
 
-class ViewItem:
-    def __init__(self, json_rep, rest_client):
-        self.rest_client=rest_client
-        for key in json_rep:
-            if key == 'self':
-                self.__dict__["rest_self"] = json_rep['self']
-            else:
-                self.__dict__[key] = json_rep[key]
-
-    def __str__(self):
-        return pformat(self.__dict__)
-
+class ViewItem(_ResourceElement):
+    """
+    Represents the data of a tuple, it's type, and the time when it was collected from the stream.
+    """
+    pass
 
 class ConfiguredView(_ResourceElement):
+    """
+    The deprecated configured view element resource provides access to configuration information for a view.
+    """
     pass
 
 
 class Host(_ResourceElement):
+    """The host element resource provides access to information about a host that is allocated to a domain as a
+    resource for running Streams services and applications.
+    """
     pass
 
 
 class Job(_ResourceElement):
+    """The job element resource provides access to information about a submitted job within a specified instance.
+    """
     def get_views(self):
         views = []
         for json_view in self.rest_client.make_request(self.views)['views']:
@@ -248,18 +254,28 @@ class Job(_ResourceElement):
 
 
 class Operator(_ResourceElement):
+    """The operator element resource provides access to information about a specific operator in a job.
+    """
     pass
 
 
 class OperatorConnection(_ResourceElement):
+    """The operator connection element resource provides access to information about a connection between two operator
+    ports.
+    """
     pass
 
 
 class PE(_ResourceElement):
+    """The processing element (PE) resource provides access to information about a PE.
+    """
     pass
 
 
 class PEConnection(_ResourceElement):
+    """The processing element (PE) connection resource provides access to information about a connection between two
+    processing element (PE) ports.
+    """
     pass
 
 
@@ -284,6 +300,7 @@ class ExportedStream(_ResourceElement):
 
 
 class Instance(_ResourceElement):
+    """The instance element resource provides access to information about a Streams instance."""
     def get_operators(self):
         operators = []
         for json_rep in self.rest_client.make_request(self.operators)['operators']:
@@ -395,6 +412,7 @@ class ActiveVersion(object):
 
 
 class Domain(_ResourceElement):
+    """The domain element resource provides access to information about an InfoSphere Streams domain."""
     def get_instances(self):
         instances = []
         for json_instance in self.rest_client.make_request(self.instances)['instances']:
