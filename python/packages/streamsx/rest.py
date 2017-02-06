@@ -108,8 +108,8 @@ class StreamsConnection:
                     installations.append(Installation(json_rep, self.rest_client))
         return installations
 
-    def retrieve_views(self):
-        """Retrieves a list of all View resources across all known streams installations.
+    def get_views(self):
+        """Gets a list of all View resources across all known streams installations.
 
         :return: Returns a list of all View resources.
         :type return: list.
@@ -121,8 +121,8 @@ class StreamsConnection:
                     views.append(view)
         return views
 
-    def retrieve_view(self, name):
-        """Retrieves a view with the specified `name`. If there are multiple views with the same name, it will return
+    def get_view(self, name):
+        """Gets a view with the specified `name`. If there are multiple views with the same name, it will return
         the first one encountered.
 
         :param name: The name of the View resource.
