@@ -14,8 +14,36 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 logger = logging.getLogger('streamsx.rest')
 
+
 class StreamsConnection:
+    """Creates a connection to a  running Streams installation and exposes methods to retrieve the state of that instance.
+
+    Streams maintains information regarding the state of its resources. For example, these resources could include the
+    currently running Jobs, Views, PEs, Operators, and Domains. The StreamsConnection provides methods to retrieve that
+    information.
+
+    Example:
+        >>> _resource_url = "https://streamsqse.localdomain:8443/streams/rest/resources"
+        >>> sc = StreamsConnection(username="streamsadmin", password="passw0rd", resource_url=_resource_url)
+        >>> instances = sc.get_instances()
+        >>> jobs_count = 0
+        >>> for instance in instances:
+        ...    jobs_count += len(instance.get_jobs())
+        >>> print("There are " + jobs_count + " jobs across all instances.")
+
+    """
     def __init__(self, username=None, password=None, resource_url=None, config=None):
+        """
+        :param username: The username of an authorized Streams user.
+        :type username: str.
+        :param password: The password associated with the username.
+        :type password: str.
+        :param resource_url: The resource endpoint of the instance. Can be found with `st geturl --api`.
+        :type resource_url: str.
+        :param config: Connection information for Bluemix. Should not be used in conjunction with username, password,
+        and resource_url.
+        :type config: dict.
+        """
         # manually specify username, password, and resource_url
         if username and password and resource_url:
             self.rest_client = StreamsRestClient(username, password, resource_url)
@@ -39,6 +67,11 @@ class StreamsConnection:
                              " to the StreamsContext constructor.")
 
     def get_domains(self):
+        """Retrieves a list of all Domain resources across all known streams installations.
+
+        :return: Returns a list of all Domain resources.
+        :type return: list.
+        """
         domains = []
         for resource in self.get_resources():
             # Get list of domains
@@ -48,6 +81,11 @@ class StreamsConnection:
         return domains
 
     def get_instances(self):
+        """Retrieves a list of all Instance resources across all known streams installations.
+
+        :return: Returns a list of all Instance resources.
+        :type return: list.
+        """
         instances = []
         for resource in self.get_resources():
             # Get list of domains
@@ -57,6 +95,11 @@ class StreamsConnection:
         return instances
 
     def get_installations(self):
+        """Retrieves a list of all known streams Installations.
+
+        :return: Returns a list of all Installation resources.
+        :type return: list.
+        """
         installations = []
         for resource in self.get_resources():
             # Get list of domains
@@ -65,14 +108,12 @@ class StreamsConnection:
                     installations.append(Installation(json_rep, self.rest_client))
         return installations
 
-    def get_resources(self):
-        resources = []
-        json_resources = self.rest_client.make_request(self.resource_url)['resources']
-        for json_resource in json_resources:
-            resources.append(Resource(json_resource, self.rest_client))
-        return resources
-
     def retrieve_views(self):
+        """Retrieves a list of all View resources across all known streams installations.
+
+        :return: Returns a list of all View resources.
+        :type return: list.
+        """
         views = []
         for domain in self.get_domains():
             for instance in domain.get_instances():
@@ -81,6 +122,12 @@ class StreamsConnection:
         return views
 
     def retrieve_view(self, name):
+        """Retrieves a view with the specified `name`. If there are multiple views with the same name, it will return
+        the first one encountered.
+
+        :param name: The name of the View resource.
+        :return: The view resource with the specified `name`.
+        """
         for domain in self.get_domains():
             for instance in domain.get_instances():
                 for view in instance.get_views():
@@ -93,8 +140,20 @@ class StreamsConnection:
 
 
 class VcapUtils(object):
+    """Contains convenience methods for retrieving the VCAP Services, credentials, and REST API URL from a provided
+    `config` dictionary.
+    """
     @staticmethod
     def get_vcap_services(config):
+        """Retrieves the VCAP Services information from the `ConfigParams.VCAP_SERVICES` field in the config object. If
+        the field is a string, it attempts to parse it as a dict. If the field is a file, it reads the file and attempts
+        to parse the contents as a dict.
+
+        :param config: Connection information for Bluemix.
+        :type config: dict.
+        :return: A dict representation of the VCAP Services information.
+        :type return: dict.
+        """
         # Attempt to retrieve from config
         try:
             vs = config[ConfigParams.VCAP_SERVICES]
@@ -123,6 +182,15 @@ class VcapUtils(object):
 
     @staticmethod
     def get_credentials(config, vcap_services):
+        """Retrieves the credentials of the VCAP Service specified by the `ConfigParams.SERVICE_NAME` field in `config`.
+
+        :param config: Connection information for Bluemix.
+        :type config: dict.
+        :param vcap_services: A dict representation of the VCAP Services information.
+        :type vcap_services: dict.
+        :return: A dict representation of the credentials.
+        :type return: dict.
+        """
         # Get the credentials for the selected service, from VCAP_SERVICES config param
         try:
             service_name = config[ConfigParams.SERVICE_NAME]
@@ -144,6 +212,13 @@ class VcapUtils(object):
 
     @staticmethod
     def get_rest_api_url_from_creds(credentials):
+        """Retrieves the Streams REST API URL from the provided credentials.
+
+        :param credentials: A dict representation of the credentials.
+        :type credentials: dict.
+        :return: The remote Streams REST API URL.
+        :type return: str.
+        """
         resources_url = credentials['rest_url'] + credentials['resources_path']
         try:
             response = requests.get(resources_url, auth=(credentials['userid'], credentials['password'])).json()
