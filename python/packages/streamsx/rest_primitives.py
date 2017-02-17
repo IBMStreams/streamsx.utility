@@ -34,6 +34,18 @@ class _ResourceElement(object):
     def __str__(self):
         return pformat(self.__dict__)
 
+    # Generically get elements from an object
+    # url - url of children
+    # json id in the returned json
+    # eclass - element class to create instances of
+    #
+    # Returns a list of eclass instances
+    def _get_elements(self, url, id, eclass):
+        elements = []
+        json_elements = self.rest_client.make_request(url)[id]
+        for json_element in json_elements:
+            elements.append(eclass(json_element, self.rest_client))
+        return elements
 
 class StreamsRestClient(object):
     """Handles the session connection with the Streams REST API.
@@ -224,16 +236,10 @@ class Job(_ResourceElement):
         return operators_connections
 
     def get_operators(self):
-        operators = []
-        for json_rep in self.rest_client.make_request(self.operators)['operators']:
-            operators.append(Operator(json_rep, self.rest_client))
-        return operators
+        return self._get_elements(self.operators, 'operators', Operator)
 
     def get_pes(self):
-        pes = []
-        for json_rep in self.rest_client.make_request(self.pes)['pes']:
-            pes.append(PE(json_rep, self.rest_client))
-        return pes
+        return self._get_elements(self.pes, 'pes', PE)
 
     def get_pe_connections(self):
         pe_connections = []
