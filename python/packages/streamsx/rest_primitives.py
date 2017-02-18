@@ -34,13 +34,16 @@ class _ResourceElement(object):
     def __str__(self):
         return pformat(self.__dict__)
 
-    # Generically get elements from an object
-    # url - url of children
-    # json id in the returned json
-    # eclass - element class to create instances of
-    #
-    # Returns a list of eclass instances
     def _get_elements(self, url, id, eclass):
+        """Generically get elements from an object.
+
+        Args:
+            url: url of children.
+            id: d in the returned json.
+            eclass: element class to create instances of.
+
+        Returns: List of eclass instances
+        """
         elements = []
         json_elements = self.rest_client.make_request(url)[id]
         for json_element in json_elements:
