@@ -209,16 +209,10 @@ class Job(_ResourceElement):
     """The job element resource provides access to information about a submitted job within a specified instance.
     """
     def get_views(self):
-        views = []
-        for json_view in self.rest_client.make_request(self.views)['views']:
-            views.append(View(json_view, self.rest_client))
-        return views
+        return self._get_elements(self.views, 'views', View)
 
     def get_active_views(self):
-        views = []
-        for json_view in self.rest_client.make_request(self.activeViews)['activeViews']:
-            views.append(ActiveView(json_view, self.rest_client))
-        return views
+        return self._get_elements(self.activeViews, 'activeViews', ActiveView)
 
     def get_domain(self):
         return Domain(self.rest_client.make_request(self.domain), self.rest_client)
@@ -227,16 +221,10 @@ class Job(_ResourceElement):
         return Instance(self.rest_client.make_request(self.instance), self.rest_client)
 
     def get_hosts(self):
-        hosts = []
-        for json_rep in self.rest_client.make_request(self.hosts)['hosts']:
-            hosts.append(Host(json_rep, self.rest_client))
-        return hosts
+        return self._get_elements(self.hosts, 'hosts', Host)
 
     def get_operator_connections(self):
-        operators_connections = []
-        for json_rep in self.rest_client.make_request(self.operatorConnections)['operatorConnections']:
-            operators_connections.append(OperatorConnection(json_rep, self.rest_client))
-        return operators_connections
+        return self._get_elements(self.operatorConnections, 'operatorConnections', OperatorConnection)
 
     def get_operators(self):
         return self._get_elements(self.operators, 'operators', Operator)
@@ -245,17 +233,10 @@ class Job(_ResourceElement):
         return self._get_elements(self.pes, 'pes', PE)
 
     def get_pe_connections(self):
-        pe_connections = []
-        for json_rep in self.rest_client.make_request(self.peConnections)['peConnections']:
-            pe_connections.append(PEConnection(json_rep, self.rest_client))
-        return pe_connections
+        return self._get_elements(self.peConnections, 'peConnections', PEConnection)
 
     def get_resource_allocations(self):
-        resource_allocations = []
-        for json_rep in self.rest_client.make_request(self.resourceAllocations)['resourceAllocations']:
-            resource_allocations.append(ResourceAllocation(json_rep, self.rest_client))
-        return resource_allocations
-
+        return self._get_elements(self.resourceAllocations, 'resourceAllocations', ResourceAllocation)
 
 class Operator(_ResourceElement):
     """The operator element resource provides access to information about a specific operator in a job.
