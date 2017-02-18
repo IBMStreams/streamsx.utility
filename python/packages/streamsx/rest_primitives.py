@@ -1,11 +1,12 @@
 # Licensed Materials - Property of IBM
-# Copyright IBM Corp. 2016
+# Copyright IBM Corp. 2016,2017
 import logging
 import requests
 import queue
 import threading
 import time
 import json
+import re
 
 from pprint import pprint, pformat
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -250,8 +251,25 @@ class Job(_ResourceElement):
 class Operator(_ResourceElement):
     """The operator element resource provides access to information about a specific operator in a job.
     """
-    pass
+    def get_metrics(self, name=None):
+        """
+        Get metrics for an operator.
 
+        Args:
+            name(str): Only return metrics matching ``name`` as a regular
+                expression using ``re.match(name, metric_name``.
+                If name is not supplied then all metrics for this operator are returned.
+
+        Returns:
+             list(Metric): List of matching metrics.
+        """
+        metrics = []
+        for json_rep in self.rest_client.make_request(self.metrics)['metrics']:
+            if name is not None:
+                if not re.match(name, json_rep['name']):
+                    continue
+            metrics.append(Metric(json_rep, self.rest_client))
+        return metrics
 
 class OperatorConnection(_ResourceElement):
     """The operator connection element resource provides access to information about a connection between two operator
@@ -259,6 +277,11 @@ class OperatorConnection(_ResourceElement):
     """
     pass
 
+class Metric(_ResourceElement):
+    """
+    Metric resource provides access to information about a Streams metric.
+    """
+    pass
 
 class PE(_ResourceElement):
     """The processing element (PE) resource provides access to information about a PE.
