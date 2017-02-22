@@ -15,6 +15,22 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 logger = logging.getLogger('streamsx.rest')
 
+def _exact_resource(json_rep, id=None):
+    if id is not None:
+        if not 'id' in json_rep:
+            return False
+        return id == json_rep['id']
+    return True
+    
+def _matching_resource(json_rep, name=None):
+    if name is not None:
+        if not 'name' in json_rep:
+            return False
+        return re.match(name, json_rep['name'])
+    return True
+
+  
+
 
 class _ResourceElement(object):
     """A class whose fields are populated by the JSON returned from a REST call.
@@ -34,6 +50,25 @@ class _ResourceElement(object):
     def __str__(self):
         return pformat(self.__dict__)
 
+    def _get_elements(self, url, key, eclass, id=None, name=None):
+        """Generically get elements from an object.
+
+        Args:
+            url: url of children.
+            key: key in the returned json.
+            eclass: element class to create instances of.
+
+        Returns: List of eclass instances
+        """
+        elements = []
+        json_elements = self.rest_client.make_request(url)[key]
+        for json_element in json_elements:
+            if not _exact_resource(json_element, id):
+                continue
+            if not _matching_resource(json_element, name):
+                continue
+            elements.append(eclass(json_element, self.rest_client))
+        return elements
 
 class StreamsRestClient(object):
     """Handles the session connection with the Streams REST API.
@@ -194,16 +229,10 @@ class Job(_ResourceElement):
     """The job element resource provides access to information about a submitted job within a specified instance.
     """
     def get_views(self):
-        views = []
-        for json_view in self.rest_client.make_request(self.views)['views']:
-            views.append(View(json_view, self.rest_client))
-        return views
+        return self._get_elements(self.views, 'views', View)
 
     def get_active_views(self):
-        views = []
-        for json_view in self.rest_client.make_request(self.activeViews)['activeViews']:
-            views.append(ActiveView(json_view, self.rest_client))
-        return views
+        return self._get_elements(self.activeViews, 'activeViews', ActiveView)
 
     def get_domain(self):
         return Domain(self.rest_client.make_request(self.domain), self.rest_client)
@@ -212,41 +241,22 @@ class Job(_ResourceElement):
         return Instance(self.rest_client.make_request(self.instance), self.rest_client)
 
     def get_hosts(self):
-        hosts = []
-        for json_rep in self.rest_client.make_request(self.hosts)['hosts']:
-            hosts.append(Host(json_rep, self.rest_client))
-        return hosts
+        return self._get_elements(self.hosts, 'hosts', Host)
 
     def get_operator_connections(self):
-        operators_connections = []
-        for json_rep in self.rest_client.make_request(self.operatorConnections)['operatorConnections']:
-            operators_connections.append(OperatorConnection(json_rep, self.rest_client))
-        return operators_connections
+        return self._get_elements(self.operatorConnections, 'operatorConnections', OperatorConnection)
 
     def get_operators(self):
-        operators = []
-        for json_rep in self.rest_client.make_request(self.operators)['operators']:
-            operators.append(Operator(json_rep, self.rest_client))
-        return operators
+        return self._get_elements(self.operators, 'operators', Operator)
 
     def get_pes(self):
-        pes = []
-        for json_rep in self.rest_client.make_request(self.pes)['pes']:
-            pes.append(PE(json_rep, self.rest_client))
-        return pes
+        return self._get_elements(self.pes, 'pes', PE)
 
     def get_pe_connections(self):
-        pe_connections = []
-        for json_rep in self.rest_client.make_request(self.peConnections)['peConnections']:
-            pe_connections.append(PEConnection(json_rep, self.rest_client))
-        return pe_connections
+        return self._get_elements(self.peConnections, 'peConnections', PEConnection)
 
     def get_resource_allocations(self):
-        resource_allocations = []
-        for json_rep in self.rest_client.make_request(self.resourceAllocations)['resourceAllocations']:
-            resource_allocations.append(ResourceAllocation(json_rep, self.rest_client))
-        return resource_allocations
-
+        return self._get_elements(self.resourceAllocations, 'resourceAllocations', ResourceAllocation)
 
 class Operator(_ResourceElement):
     """The operator element resource provides access to information about a specific operator in a job.
@@ -263,13 +273,7 @@ class Operator(_ResourceElement):
         Returns:
              list(Metric): List of matching metrics.
         """
-        metrics = []
-        for json_rep in self.rest_client.make_request(self.metrics)['metrics']:
-            if name is not None:
-                if not re.match(name, json_rep['name']):
-                    continue
-            metrics.append(Metric(json_rep, self.rest_client))
-        return metrics
+        return self._get_elements(self.metrics, 'metrics', Metric, name=name)
 
 class OperatorConnection(_ResourceElement):
     """The operator connection element resource provides access to information about a connection between two operator
@@ -319,86 +323,48 @@ class ExportedStream(_ResourceElement):
 class Instance(_ResourceElement):
     """The instance element resource provides access to information about a Streams instance."""
     def get_operators(self):
-        operators = []
-        for json_rep in self.rest_client.make_request(self.operators)['operators']:
-            operators.append(Operator(json_rep, self.rest_client))
-        return operators
+        return self._get_elements(self.operators, 'operators', Operator)
 
     def get_operator_connections(self):
-        operators_connections = []
-        for json_rep in self.rest_client.make_request(self.operatorConnections)['operatorConnections']:
-            operators_connections.append(OperatorConnection(json_rep, self.rest_client))
-        return operators_connections
+        return self._get_elements(self.operatorConnections, 'operatorConnections', OperatorConnection)
 
     def get_pes(self):
-        pes = []
-        for json_rep in self.rest_client.make_request(self.pes)['pes']:
-            pes.append(PE(json_rep, self.rest_client))
-        return pes
+        return self._get_elements(self.pes, 'pes', PE)
 
     def get_pe_connections(self):
-        pe_connections = []
-        for json_rep in self.rest_client.make_request(self.peConnections)['peConnections']:
-            pe_connections.append(PEConnection(json_rep, self.rest_client))
-        return pe_connections
+        return self._get_elements(self.peConnections, 'peConnections', PEConnection)
 
     def get_views(self):
-        views = []
-        for json_view in self.rest_client.make_request(self.views)['views']:
-            views.append(View(json_view, self.rest_client))
-        return views
+        return self._get_elements(self.views, 'views', View)
 
     def get_hosts(self):
-        hosts = []
-        for json_rep in self.rest_client.make_request(self.hosts)['hosts']:
-            hosts.append(Host(json_rep, self.rest_client))
-        return hosts
+        return self._get_elements(self.hosts, 'hosts', Host)
 
     def get_domain(self):
         return Domain(self.rest_client.make_request(self.domain), self.rest_client)
 
     def get_active_views(self):
-        views = []
-        for json_view in self.rest_client.make_request(self.activeViews)['activeViews']:
-            views.append(ActiveView(json_view, self.rest_client))
-        return views
+        return self._get_elements(self.activeViews, 'activeViews', ActiveView)
 
     def get_configured_views(self):
-        views = []
-        for json_view in self.rest_client.make_request(self.configuredViews)['configuredViews']:
-            views.append(ConfiguredView(json_view, self.rest_client))
-        return views
+        return self._get_elements(self.confgiuredViews, 'confgiuredViews', ConfiguredView)
 
-    def get_jobs(self):
-        jobs = []
-        for json_rep in self.rest_client.make_request(self.jobs)['jobs']:
-            jobs.append(Job(json_rep, self.rest_client))
-        return jobs
+    def get_jobs(self, id=None, name=None):
+        if id is not None:
+            id = str(id)
+        return self._get_elements(self.jobs, 'jobs', Job, id, name)
 
     def get_imported_streams(self):
-        imported_streams = []
-        for json_rep in self.rest_client.make_request(self.importedStreams)['importedStreams']:
-            imported_streams.append(ImportedStream(json_rep, self.rest_client))
-        return imported_streams
+        return self._get_elements(self.importedStreams, 'importedStreams', ImportedStream)
 
     def get_exported_streams(self):
-        exported_streams = []
-        for json_rep in self.rest_client.make_request(self.exportedStreams)['exportedStreams']:
-            exported_streams.append(ExportedStream(json_rep, self.rest_client))
-        return exported_streams
+        return self._get_elements(self.exportedStreams, 'exportedStreams', ExportedStream)
 
     def get_active_services(self):
-        active_services = []
-        for json_rep in self.rest_client.make_request(self.activeServices)['activeServices']:
-            active_services.append(ActiveService(json_rep, self.rest_client))
-        return active_services
+        return self._get_elements(self.activeServices, 'activeServices', ActiveService)
 
     def get_resource_allocations(self):
-        resource_allocations = []
-        for json_rep in self.rest_client.make_request(self.resourceAllocations)['resourceAllocations']:
-            resource_allocations.append(ResourceAllocation(json_rep, self.rest_client))
-        return resource_allocations
-
+        return self._get_elements(self.resourceAllocations, 'resourceAllocations', ResourceAllocation)
 
 class ResourceTag(object):
     def __init__(self, json_resource_tag):
@@ -431,42 +397,19 @@ class ActiveVersion(object):
 class Domain(_ResourceElement):
     """The domain element resource provides access to information about an InfoSphere Streams domain."""
     def get_instances(self):
-        instances = []
-        for json_instance in self.rest_client.make_request(self.instances)['instances']:
-            instances.append(Instance(json_instance, self.rest_client))
-        return instances
+        return self._get_elements(self.instances, 'instances', Instance)
 
     def get_hosts(self):
-        hosts = []
-        for json_rep in self.rest_client.make_request(self.hosts)['hosts']:
-            hosts.append(Host(json_rep, self.rest_client))
-        return hosts
+        return self._get_elements(self.hosts, 'hosts', Host)
 
     def get_active_services(self):
-        active_services = []
-        for json_rep in self.rest_client.make_request(self.activeServices)['activeServices']:
-            active_services.append(ActiveService(json_rep, self.rest_client))
-        return active_services
+        return self._get_elements(self.activeServices, 'activeServices', ActiveService)
 
     def get_resource_allocations(self):
-        resource_allocations = []
-        for json_rep in self.rest_client.make_request(self.resourceAllocations)['resourceAllocations']:
-            resource_allocations.append(ResourceAllocation(json_rep, self.rest_client))
-        return resource_allocations
+        return self._get_elements(self.resourceAllocations, 'resourceAllocations', ResourceAllocation)
 
     def get_resources(self):
-        resources = []
-        json_resources = self.rest_client.make_request(self.resource_url)['resources']
-        for json_resource in json_resources:
-            resources.append(Resource(json_resource, self.rest_client))
-        return resources
-
-    def get_resources(self):
-        resources = []
-        json_resources = self.rest_client.make_request(self.resource_url)['resources']
-        for json_resource in json_resources:
-            resources.append(Resource(json_resource, self.rest_client))
-        return resources
+        return self._get_elements(self.resource_url, 'resources', Resource)
 
 
 class Resource(_ResourceElement):

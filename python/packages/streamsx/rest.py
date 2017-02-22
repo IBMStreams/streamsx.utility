@@ -5,7 +5,7 @@ import os
 import json
 import logging
 
-from .rest_primitives import Domain, Instance, Installation, Resource, StreamsRestClient
+from .rest_primitives import Domain, Instance, Installation, Resource, StreamsRestClient, _exact_resource
 from .rest_errors import ViewNotFoundError
 from pprint import pformat
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -66,33 +66,31 @@ class StreamsConnection:
             raise ValueError("Must supply either a BlueMix VCAP Services or a username, password, and resource url"
                              " to the StreamsContext constructor.")
 
-    def get_domains(self):
+    def _get_elements(self, resource_name, eclass, id=None):
+        elements = []
+        for resource in self.get_resources():
+            if resource.name == resource_name:
+                for json_element in resource.get_resource()[resource_name]:
+                    if not _exact_resource(json_element, id):
+                        continue
+                    elements.append(eclass(json_element, self.rest_client))
+        return elements
+
+    def get_domains(self, id=None):
         """Retrieves a list of all Domain resources across all known streams installations.
 
         :return: Returns a list of all Domain resources.
         :type return: list.
         """
-        domains = []
-        for resource in self.get_resources():
-            # Get list of domains
-            if resource.name == "domains":
-                for json_domain in resource.get_resource()['domains']:
-                    domains.append(Domain(json_domain, self.rest_client))
-        return domains
+        return self._get_elements('domains', Domain, id=id)
 
-    def get_instances(self):
+    def get_instances(self, id=None):
         """Retrieves a list of all Instance resources across all known streams installations.
 
         :return: Returns a list of all Instance resources.
         :type return: list.
         """
-        instances = []
-        for resource in self.get_resources():
-            # Get list of domains
-            if resource.name == "instances":
-                for json_rep in resource.get_resource()['instances']:
-                    instances.append(Instance(json_rep, self.rest_client))
-        return instances
+        return self._get_elements('instances', Instance, id=id)
 
     def get_installations(self):
         """Retrieves a list of all known streams Installations.
@@ -100,13 +98,7 @@ class StreamsConnection:
         :return: Returns a list of all Installation resources.
         :type return: list.
         """
-        installations = []
-        for resource in self.get_resources():
-            # Get list of domains
-            if resource.name == "installations":
-                for json_rep in resource.get_resource()['installations']:
-                    installations.append(Installation(json_rep, self.rest_client))
-        return installations
+        return self._get_elements('installations', Installation)
 
     def get_views(self):
         """Gets a list of all View resources across all known streams installations.
