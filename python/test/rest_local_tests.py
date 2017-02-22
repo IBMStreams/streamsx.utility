@@ -11,7 +11,7 @@ from common_tests import credentials_file_name
 
 from streamsx.topology import context
 
-class TestRestFeaturesLocal(CommonTests):
+class TestRestFeaturesLocal(CommonTests, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """

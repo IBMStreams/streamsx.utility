@@ -4,8 +4,9 @@ from common_tests import CommonTests
 from streamsx import rest
 from streamsx.topology import context
 import json
+import unittest
 
-class TestRestFeaturesBluemix(CommonTests):
+class TestRestFeaturesBluemix(CommonTests, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """
