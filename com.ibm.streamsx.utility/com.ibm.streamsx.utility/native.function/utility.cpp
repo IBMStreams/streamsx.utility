@@ -6,6 +6,7 @@
 #include "utility.h"
 #include <sched.h>
 #include <numa.h>
+#include <pthread.h>
 
 // We are in directory sample.  This translates
 // to namespace sample in SPL, and
@@ -104,4 +105,10 @@ namespace com { namespace ibm { namespace streamsx { namespace utility {
         if (rc<0) THROW (SPLRuntimeOperator, "could not set processor affinity to CPUs"
             << ", " << strerror(errno));
     }
+
+    void setThreadName(SPL::rstring name)
+    {
+        pthread_setname_np(pthread_self(), name.c_str());
+    }
+
 }}}}
