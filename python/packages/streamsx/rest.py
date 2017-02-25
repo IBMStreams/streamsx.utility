@@ -4,6 +4,7 @@ import requests
 import os
 import json
 import logging
+import streamsx.st as st
 
 from .rest_primitives import Domain, Instance, Installation, Resource, StreamsRestClient, _exact_resource
 from .rest_errors import ViewNotFoundError
@@ -48,11 +49,13 @@ class StreamsConnection:
         if username and password and resource_url:
             self.rest_client = StreamsRestClient(username, password, resource_url)
             self.resource_url = resource_url
+            self._analytics_service = False
 
         # Connect to Bluemix service using VCAP
         elif config:
             vcap_services = VcapUtils.get_vcap_services(config)
             credentials = VcapUtils.get_credentials(config, vcap_services)
+            self._analytics_service = True
 
             # Obtain the streams SWS REST URL
             rest_api_url = VcapUtils.get_rest_api_url_from_creds(credentials)
@@ -60,11 +63,24 @@ class StreamsConnection:
             # Create rest connection to remote Bluemix SWS
             self.rest_client = StreamsRestClient(credentials['userid'], credentials['password'], rest_api_url)
             self.resource_url = rest_api_url
+
+        elif username and password and st._has_local_install:
+            self.resource_url = st.get_rest_api()
+            self.rest_client = StreamsRestClient(username, password, self.resource_url)
+            self._analytics_service = False
+
+        elif st._has_local_install:
+            # Assume quickstart
+            self.resource_url = st.get_rest_api()
+            self.rest_client = StreamsRestClient('streamsadmin', 'passw0rd', self.resource_url)
+            self._analytics_service = False
+
         else:
             logger.error("Invalid arguments for StreamsContext.__init__: must supply either a BlueMix VCAP Services or "
                          "a username, password, and resource url.")
             raise ValueError("Must supply either a BlueMix VCAP Services or a username, password, and resource url"
                              " to the StreamsContext constructor.")
+        self.rest_client._analytics_service = self._analytics_service
 
     def _get_elements(self, resource_name, eclass, id=None):
         elements = []
