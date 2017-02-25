@@ -265,6 +265,7 @@ class Job(_ResourceElement):
             force(bool): Forcefully cancel this job.
 
         Returns:
+            True if the job was cancelled, otherwise False if an error occurred.
 
         """
         if not self.rest_client._analytics_service:
