@@ -258,6 +258,26 @@ class Job(_ResourceElement):
     def get_resource_allocations(self):
         return self._get_elements(self.resourceAllocations, 'resourceAllocations', ResourceAllocation)
 
+    def cancel(self, force=False):
+        """Cancel this job.
+
+        Args:
+            force(bool): Forcefully cancel this job.
+
+        Returns:
+            True if the job was cancelled, otherwise False if an error occurred.
+
+        """
+        if not self.rest_client._analytics_service:
+            import streamsx.st as st
+            if st._has_local_install:
+                if not st._cancel_job(self.id, force):
+                    if force:
+                        return False
+                    return st._cancel_job(self.id, force=True)
+                return True
+        raise NotImplementedError('Job.cancel()')
+
 class Operator(_ResourceElement):
     """The operator element resource provides access to information about a specific operator in a job.
     """
