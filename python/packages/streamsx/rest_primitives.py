@@ -268,7 +268,7 @@ class Job(_ResourceElement):
             True if the job was cancelled, otherwise False if an error occurred.
 
         """
-        if not self.rest_client._analytics_service:
+        if not self.rest_client._sc._analytics_service:
             import streamsx.st as st
             if st._has_local_install:
                 if not st._cancel_job(self.id, force):
@@ -276,6 +276,9 @@ class Job(_ResourceElement):
                         return False
                     return st._cancel_job(self.id, force=True)
                 return True
+        else:
+            self.rest_client._sc.get_streaming_analytics().cancel_job(self.id)
+            return True
         raise NotImplementedError('Job.cancel()')
 
 class Operator(_ResourceElement):
@@ -444,4 +447,35 @@ def get_view_obj(_view, rc):
                 if view.name == _view.name:
                     return view
     return None
+
+
+class StreamingAnalyticsService(object):
+    """Streaming Analytics service running on IBM Bluemix cloud platform.
+
+    """
+    def __init__(self, rest_client, credentials):
+        self.rest_client = rest_client
+        self._credentials = credentials
+
+    def _get_url(self, req_name):
+        return self._credentials['rest_url'] + self._credentials[req_name]
+
+    def cancel_job(self, job_id=None, job_name=None, ):
+        """Cancel a running job.
+
+        Args:
+            job_id(str): Identifier of job to be canceled.
+            job_name(str): Name of job to be canceled.
+
+        Returns:
+
+        """
+        payload = {}
+        if job_name is not None:
+            payload['job_name'] = job_name
+        if job_id is not None:
+            payload['job_id'] = job_id
+
+        jobs_url = self._get_url('jobs_path')
+        return self.rest_client.session.delete(jobs_url, params=payload).json()
 

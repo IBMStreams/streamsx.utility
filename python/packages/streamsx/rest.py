@@ -1,12 +1,12 @@
 # Licensed Materials - Property of IBM
-# Copyright IBM Corp. 2016
+# Copyright IBM Corp. 2016,2017
 import requests
 import os
 import json
 import logging
 import streamsx.st as st
 
-from .rest_primitives import Domain, Instance, Installation, Resource, StreamsRestClient, _exact_resource
+from .rest_primitives import Domain, Instance, Installation, Resource, StreamsRestClient, StreamingAnalyticsService,  _exact_resource
 from .rest_errors import ViewNotFoundError
 from pprint import pformat
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -17,7 +17,7 @@ logger = logging.getLogger('streamsx.rest')
 
 
 class StreamsConnection:
-    """Creates a connection to a  running Streams installation and exposes methods to retrieve the state of that instance.
+    """Creates a connection to a running Streams instance and exposes methods to retrieve the state of that instance.
 
     Streams maintains information regarding the state of its resources. For example, these resources could include the
     currently running Jobs, Views, PEs, Operators, and Domains. The StreamsConnection provides methods to retrieve that
@@ -33,7 +33,7 @@ class StreamsConnection:
         >>> print("There are " + jobs_count + " jobs across all instances.")
 
     """
-    def __init__(self, username=None, password=None, resource_url=None, config=None):
+    def __init__(self, username=None, password=None, resource_url=None, config=None, instance_id=None):
         """
         :param username: The username of an authorized Streams user.
         :type username: str.
@@ -47,40 +47,44 @@ class StreamsConnection:
         """
         # manually specify username, password, and resource_url
         if username and password and resource_url:
-            self.rest_client = StreamsRestClient(username, password, resource_url)
-            self.resource_url = resource_url
-            self._analytics_service = False
+            self._setup_distributed(instance_id, username, password, resource_url)
 
         # Connect to Bluemix service using VCAP
         elif config:
             vcap_services = VcapUtils.get_vcap_services(config)
-            credentials = VcapUtils.get_credentials(config, vcap_services)
+            self.credentials = VcapUtils.get_credentials(config, vcap_services)
             self._analytics_service = True
 
             # Obtain the streams SWS REST URL
-            rest_api_url = VcapUtils.get_rest_api_url_from_creds(credentials)
+            rest_api_url = VcapUtils.get_rest_api_url_from_creds(self.credentials)
 
             # Create rest connection to remote Bluemix SWS
-            self.rest_client = StreamsRestClient(credentials['userid'], credentials['password'], rest_api_url)
+            self.rest_client = StreamsRestClient(self.credentials['userid'], self.credentials['password'], rest_api_url)
             self.resource_url = rest_api_url
+            # Get the instance id from one of the URL paths
+            self.instance_id = self.credentials['jobs_path'].split('/service_instances/',1)[1].split('/',1)[0]
 
         elif username and password and st._has_local_install:
-            self.resource_url = st.get_rest_api()
-            self.rest_client = StreamsRestClient(username, password, self.resource_url)
-            self._analytics_service = False
+            self._setup_distributed(instance_id, username, password, st.get_rest_api())
 
         elif st._has_local_install:
             # Assume quickstart
-            self.resource_url = st.get_rest_api()
-            self.rest_client = StreamsRestClient('streamsadmin', 'passw0rd', self.resource_url)
-            self._analytics_service = False
+            self._setup_distributed(instance_id, 'streamsadmin', 'passw0rd', st.get_rest_api())
 
         else:
             logger.error("Invalid arguments for StreamsContext.__init__: must supply either a BlueMix VCAP Services or "
                          "a username, password, and resource url.")
             raise ValueError("Must supply either a BlueMix VCAP Services or a username, password, and resource url"
                              " to the StreamsContext constructor.")
-        self.rest_client._analytics_service = self._analytics_service
+        self.rest_client._sc = self
+
+    def _setup_distributed(self, instance_id, username, password, resource_url):
+        self.resource_url = resource_url
+        self.rest_client = StreamsRestClient(username, password, self.resource_url)
+        self._analytics_service = False
+        if instance_id is None:
+            instance_id = os.environ['STREAMS_INSTANCE_ID']
+        self.instance_id = instance_id
 
     def _get_elements(self, resource_name, eclass, id=None):
         elements = []
@@ -91,6 +95,19 @@ class StreamsConnection:
                         continue
                     elements.append(eclass(json_element, self.rest_client))
         return elements
+
+    def get_streaming_analytics(self):
+        """
+        Get a ref:StreamingAnalyticsService to allow interaction with
+        the Streaming Analytics service this object is connected to.
+
+        This connection must be configured for a Streaming Analytics service.
+        Returns:
+            StreamingAnalyticsService: Object to interact with service.
+        """
+        assert self._analytics_service
+
+        return StreamingAnalyticsService(self.rest_client, self.credentials)
 
     def get_domains(self, id=None):
         """Retrieves a list of all Domain resources across all known streams installations.
