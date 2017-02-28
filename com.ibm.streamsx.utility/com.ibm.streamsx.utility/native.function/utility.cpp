@@ -108,7 +108,15 @@ namespace com { namespace ibm { namespace streamsx { namespace utility {
 
     void setThreadName(SPL::rstring name)
     {
-        pthread_setname_np(pthread_self(), name.c_str());
+        // pthread_setname_np() only supports names that are 15 characters long (+ null terminator)
+        SPL::rstring temp(name);
+        if(name.length() > 15) {
+            temp = name.substr(0, 15);
+        }
+
+        int rc = pthread_setname_np(pthread_self(), temp.c_str());
+        if(rc != 0) THROW (SPLRuntimeOperator, "could not set thread name to " << temp <<
+                           ", " << strerror(rc));
     }
 
 }}}}
