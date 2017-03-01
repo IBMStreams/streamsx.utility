@@ -2,6 +2,46 @@ namespace com.ibm.streamsx.utility ;
 
 use com.ibm.streamsx.utility::* ;
 
+/**
+ * The AdaptiveTupleCounter operator counts tuples that flow on the stream.
+ *
+ * Periodically, it displays the current throughput in the application
+ * traces (at the ERROR level).  It attempts to adapt to the current
+ * stream throughput, so that it only incurs the tracing cost every
+ * targetInterval seconds (approximately), and most other tuples will have
+ * almost no overhead caused by this operator.
+ *
+ * @input In              The stream from which to count tuples.
+ * @param targetInterval  The desired target tracing interval (in seconds).
+ *                        Traces will occur with at-most this frequency.
+ *                        A value of 0 means to not trace at all (the default).
+ *
+ * The AdaptiveTupleCounterTargetInterval submission-time parameter can be used
+ * to control the target interval for all instances of the AdaptiveTupleCounter
+ * in the application, but if a given operator invocation sets the
+ * targetInterval parameter explicitly, that value will take precedence over
+ * the submission time value.
+ *
+ * To use the operator, simply attach an instance of this operator to the
+ * desired stream.
+ *
+ * In an example SPL application:
+ *
+ * use com.ibm.streamsx.utility::*;
+ * public composite Main {
+ *   graph
+ *
+ *     // Arbitrary operators generating a stream of interest
+ *     stream<int64 x> StreamUnderTest = Beacon() { ... }
+ *
+ *     // The AdaptiveTupleCounter
+ *     () as CountStreamUnderTest = AdaptiveTupleCounter(StreamUnderTest) {}
+ *
+ *     // Potentially other arbitrary operators using the stream of interest
+ *     () as OutputSink = FileSink(StreamUnderTest) { ... }
+ * }
+ *
+ */
 public composite AdaptiveTupleCounter(input In)
 {
     param
