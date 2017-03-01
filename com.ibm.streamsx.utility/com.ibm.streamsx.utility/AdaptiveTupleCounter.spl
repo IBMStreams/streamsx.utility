@@ -5,7 +5,7 @@ use com.ibm.streamsx.utility::* ;
 public composite AdaptiveTupleCounter(input In)
 {
     param
-        expression<int64> $targetInterval : (int64)getSubmissionTimeValue("AdaptiveTupleCounterTargetInterval", "3600");  // Default is 1 hour target interval for tracing.
+        expression<int64> $targetInterval : (int64)getSubmissionTimeValue("AdaptiveTupleCounterTargetInterval", "0");  // Default is to disable tracing.
 
     graph
         () as Counter = Custom(In)
@@ -31,33 +31,38 @@ public composite AdaptiveTupleCounter(input In)
                   int64 deltaTns = thistime - lasttime;
                   ++checkCount;
 
-                  if(deltaTns > targetIntervalNs) {
-                      if(deltaTns > 11l* targetIntervalNs / 8l) {
-                          // It is taking way too long to get to currentCheckInterval.  Recompute currentCheckInterval (shrinking it).
+                  if(targetIntervalNs > 0l) {
+                      if(deltaTns > targetIntervalNs) {
+                          if(deltaTns > 11l* targetIntervalNs / 8l) {
+                              // It is taking way too long to get to currentCheckInterval.  Recompute currentCheckInterval (shrinking it).
+                              // Overshoot by 12.5% so we should display immediately after checking, 1:1
+                              currentCheckInterval = 9ul* (uint64)targetIntervalNs * tupleCount / (uint64)deltaTns / 8ul;
+                              if(currentCheckInterval == 0ul) {
+                                  currentCheckInterval = 1ul;
+                              }
+                          }
+
+                          // Ok actually compute and trace the throughput for this tap point.
+                          float64 throughput = (float64)tupleCount/((float64)deltaTns/1.0e9fl);
+                          appTrc(Trace.error, "Current throughput: " + (rstring)throughput + " Tps; Checks: " + (rstring)checkCount + ", Tuples: " + (rstring)tupleCount + ", Interval: " + (rstring)((float64)deltaTns/1e9fl) + " s");
+
+                          // Reset the counter and timestamps for next time
+                          lasttime = thistime;
+                          tupleCount = 0ul;
+                          checkCount = 0ul;
+                      } else if(deltaTns < 7l* targetIntervalNs / 8l) {
+                          // Hitting currentCheckInterval way too quick.  Recompute currentCheckInterval (growing it).
                           // Overshoot by 12.5% so we should display immediately after checking, 1:1
                           currentCheckInterval = 9ul* (uint64)targetIntervalNs * tupleCount / (uint64)deltaTns / 8ul;
                           if(currentCheckInterval == 0ul) {
                               currentCheckInterval = 1ul;
                           }
-                      }
-
-                      // Ok actually compute and trace the throughput for this tap point.
-                      float64 throughput = (float64)tupleCount/((float64)deltaTns/1.0e9fl);
-                      appTrc(Trace.error, "Current throughput: " + (rstring)throughput + " Tps; Checks: " + (rstring)checkCount + ", Tuples: " + (rstring)tupleCount + ", Interval: " + (rstring)((float64)deltaTns/1e9fl) + " s");
-
-                      // Reset the counter and timestamps for next time
-                      lasttime = thistime;
-                      tupleCount = 0ul;
-                      checkCount = 0ul;
-                  } else if(deltaTns < 7l* targetIntervalNs / 8l) {
-                      // Hitting currentCheckInterval way too quick.  Recompute currentCheckInterval (growing it).
-                      // Overshoot by 12.5% so we should display immediately after checking, 1:1
-                      currentCheckInterval = 9ul* (uint64)targetIntervalNs * tupleCount / (uint64)deltaTns / 8ul;
-                      if(currentCheckInterval == 0ul) {
-                          currentCheckInterval = 1ul;
+                      } else {
+                          // Hitting currentCheckInterval just slightly too quick.  Leave it as it is to avoid thrashing the interval targets.
                       }
                   } else {
-                      // Hitting currentCheckInterval just slightly too quick.  Leave it as it is to avoid thrashing the interval targets.
+                      // Since we're not going to be tracing, set the currentCheckInterval to something really high to avoid wasting time in here.
+                      currentCheckInterval = 0xFFFFFFFFFFFFFFFFu;
                   }
               }
             }
