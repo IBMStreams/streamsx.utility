@@ -1,0 +1,110 @@
+namespace com.ibm.streamsx.utility ;
+
+use com.ibm.streamsx.utility::* ;
+
+/**
+ * The AdaptiveTupleCounter operator counts tuples that flow on the stream.
+ *
+ * Periodically, it displays the current throughput in the application
+ * traces (at the ERROR level).  It attempts to adapt to the current
+ * stream throughput, so that it only incurs the tracing cost every
+ * targetInterval seconds (approximately), and most other tuples will have
+ * almost no overhead caused by this operator.
+ *
+ * @input In              The stream from which to count tuples.
+ * @param targetInterval  The desired target tracing interval (in seconds).
+ *                        Traces will occur with at-most this frequency.
+ *                        A value of 0 means to not trace at all (the default).
+ *
+ * The AdaptiveTupleCounterTargetInterval submission-time parameter can be used
+ * to control the target interval for all instances of the AdaptiveTupleCounter
+ * in the application, but if a given operator invocation sets the
+ * targetInterval parameter explicitly, that value will take precedence over
+ * the submission time value.
+ *
+ * To use the operator, simply attach an instance of this operator to the
+ * desired stream.
+ *
+ * In an example SPL application:
+ *
+ * use com.ibm.streamsx.utility::*;
+ * public composite Main {
+ *   graph
+ *
+ *     // Arbitrary operators generating a stream of interest
+ *     stream<int64 x> StreamUnderTest = Beacon() { ... }
+ *
+ *     // The AdaptiveTupleCounter
+ *     () as CountStreamUnderTest = AdaptiveTupleCounter(StreamUnderTest) {}
+ *
+ *     // Potentially other arbitrary operators using the stream of interest
+ *     () as OutputSink = FileSink(StreamUnderTest) { ... }
+ * }
+ *
+ */
+public composite AdaptiveTupleCounter(input In)
+{
+    param
+        expression<int64> $targetInterval : (int64)getSubmissionTimeValue("AdaptiveTupleCounterTargetInterval", "0");  // Default is to disable tracing.
+
+    graph
+        () as Counter = Custom(In)
+        {
+          logic
+            state: {
+              mutable boolean first = true;
+              mutable uint64 tupleCount = 0ul;
+              mutable uint64 checkCount = 0ul;
+              mutable int64 lasttime = 0l;
+              int64 targetIntervalNs = $targetInterval * 1000000000l;
+              mutable uint64 currentCheckInterval = 10ul;  // This should be way too often, but will get adjusted upwards pretty quick.
+            }
+
+            onTuple In: {
+              if (first) {
+                first = false;
+                lasttime = getCPUCounterInNanoSeconds();
+              }
+              ++tupleCount;
+              if(tupleCount % currentCheckInterval == 0ul) {
+                  int64 thistime = getCPUCounterInNanoSeconds();
+                  int64 deltaTns = thistime - lasttime;
+                  ++checkCount;
+
+                  if(targetIntervalNs > 0l) {
+                      if(deltaTns > targetIntervalNs) {
+                          if(deltaTns > 11l* targetIntervalNs / 8l) {
+                              // It is taking way too long to get to currentCheckInterval.  Recompute currentCheckInterval (shrinking it).
+                              // Overshoot by 12.5% so we should display immediately after checking, 1:1
+                              currentCheckInterval = 9ul* (uint64)targetIntervalNs * tupleCount / (uint64)deltaTns / 8ul;
+                              if(currentCheckInterval == 0ul) {
+                                  currentCheckInterval = 1ul;
+                              }
+                          }
+
+                          // Ok actually compute and trace the throughput for this tap point.
+                          float64 throughput = (float64)tupleCount/((float64)deltaTns/1.0e9fl);
+                          appTrc(Trace.error, "Current throughput: " + (rstring)throughput + " Tps; Checks: " + (rstring)checkCount + ", Tuples: " + (rstring)tupleCount + ", Interval: " + (rstring)((float64)deltaTns/1e9fl) + " s");
+
+                          // Reset the counter and timestamps for next time
+                          lasttime = thistime;
+                          tupleCount = 0ul;
+                          checkCount = 0ul;
+                      } else if(deltaTns < 7l* targetIntervalNs / 8l) {
+                          // Hitting currentCheckInterval way too quick.  Recompute currentCheckInterval (growing it).
+                          // Overshoot by 12.5% so we should display immediately after checking, 1:1
+                          currentCheckInterval = 9ul* (uint64)targetIntervalNs * tupleCount / (uint64)deltaTns / 8ul;
+                          if(currentCheckInterval == 0ul) {
+                              currentCheckInterval = 1ul;
+                          }
+                      } else {
+                          // Hitting currentCheckInterval just slightly too quick.  Leave it as it is to avoid thrashing the interval targets.
+                      }
+                  } else {
+                      // Since we're not going to be tracing, set the currentCheckInterval to something really high to avoid wasting time in here.
+                      currentCheckInterval = 0xFFFFFFFFFFFFFFFFu;
+                  }
+              }
+            }
+        }
+}

@@ -31,6 +31,10 @@
         <description></description>
         <prototype>public void setCPUAffinity(list&lt;uint64> cpus)</prototype>
       </function>
+      <function>
+        <description></description>
+        <prototype>public void setThreadName(rstring name)</prototype>
+      </function>
     </functions>
     <dependencies>
       <library>

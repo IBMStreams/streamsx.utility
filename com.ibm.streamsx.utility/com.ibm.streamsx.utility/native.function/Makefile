@@ -25,7 +25,7 @@ utility.o: utility.cpp utility.h
 lib/libutility.so: utility.o
 	@-mkdir -p lib
 	@echo Building C++ shared library '$@'
-	@g++ -lnuma -shared -o $@ $<
+	@g++ -lnuma -lpthread -shared -o $@ $<
 	@mkdir -p ../../impl/lib
 	@cp lib/libutility.so ../../impl/lib/.
 
