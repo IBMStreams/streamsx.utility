@@ -63,3 +63,34 @@ class CommonTests(unittest.TestCase):
             view.stop_data_fetch()
         self.logger.debug("Returned view value in basic_view_support is " + view_tuple_value)
         self.assertTrue(view_tuple_value.startswith('hello'))
+
+    def test_job_refresh_support(self):
+        self.logger.debug("Beginning test: test_job_refresh_support.")
+        topo = topology.Topology('jobRefreshTest')
+        topo.source(['hello', 'world'])
+ 
+        self.logger.debug("Beginning compilation and submission of jobRefreshTest topology.")
+        result = self._submit(topo)
+ 
+        self.assertIn('jobId', result)
+        job_id = result['jobId']
+        
+        ctxt = rest.StreamsConnection(self.sws_username, self.sws_password, self.sws_rest_api_url)
+        instance = ctxt.get_instances()[0]
+        job = instance.get_jobs(id=job_id)[0]
+        self.assertEqual(getattr(job, 'health', 'missing'), 'healthy')
+
+        rc = job.cancel()
+        self.assertTrue(rc)
+
+        # give 10 seconds and monitor for health status change
+        timeout = 10
+        endtime = time.time() + timeout
+        while time.time() < endtime:
+            time.sleep(2)
+            job.refresh()
+            health = getattr(job, 'health', 'missing')
+            if not health == 'healthy':
+                break
+
+        self.assertNotEqual(health, 'healthy')

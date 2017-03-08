@@ -37,10 +37,11 @@ class _ResourceElement(object):
     """
     def __init__(self, json_rep, rest_client):
         """
-        :param json_rep: The JSON response from a REST call.
-        :param rest_client: The client used to make the REST call.
+        Args:
+            json_rep(dict): The JSON response from a REST call.
+            rest_client(string): The client used to make the REST call.
         """
-        self.rest_client=rest_client
+        self.rest_client = rest_client
         for key in json_rep:
             if key == 'self':
                 self.__dict__["rest_self"] = json_rep['self']
@@ -49,6 +50,21 @@ class _ResourceElement(object):
 
     def __str__(self):
         return pformat(self.__dict__)
+    __repr__ = __str__
+
+    def refresh(self):
+        """Make a REST call to refresh the JSON object stored within the object
+
+        Returns:
+            _ResourceElement: The provided object instance is returned with updated value
+        """
+        rest_client = self.rest_client
+        rest_self = self.rest_self
+        json_rep = rest_client.make_request(rest_self)
+        self.__dict__.clear()
+        self.rest_self = rest_self
+        self.__init__(json_rep, rest_client)
+        return self
 
     def _get_elements(self, url, key, eclass, id=None, name=None):
         """Generically get elements from an object.
