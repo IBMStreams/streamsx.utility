@@ -197,26 +197,11 @@ class View(_ResourceElement):
         logger.debug("Retrieved " + str(len(view_items)) + " items from view " + self.name)
         return view_items
 
-class ActiveView(_ResourceElement):
-    """
-    The deprecated active view element resource provides access to information about a view that is active.
-    """
-    pass
-
-
 class ViewItem(_ResourceElement):
     """
     Represents the data of a tuple, it's type, and the time when it was collected from the stream.
     """
     pass
-
-
-class ConfiguredView(_ResourceElement):
-    """
-    The deprecated configured view element resource provides access to configuration information for a view.
-    """
-    pass
-
 
 class Host(_ResourceElement):
     """The host element resource provides access to information about a host that is allocated to a domain as a
@@ -230,9 +215,6 @@ class Job(_ResourceElement):
     """
     def get_views(self):
         return self._get_elements(self.views, 'views', View)
-
-    def get_active_views(self):
-        return self._get_elements(self.activeViews, 'activeViews', ActiveView)
 
     def get_domain(self):
         return Domain(self.rest_client.make_request(self.domain), self.rest_client)
@@ -365,12 +347,6 @@ class Instance(_ResourceElement):
 
     def get_domain(self):
         return Domain(self.rest_client.make_request(self.domain), self.rest_client)
-
-    def get_active_views(self):
-        return self._get_elements(self.activeViews, 'activeViews', ActiveView)
-
-    def get_configured_views(self):
-        return self._get_elements(self.confgiuredViews, 'confgiuredViews', ConfiguredView)
 
     def get_jobs(self, id=None, name=None):
         if id is not None:
