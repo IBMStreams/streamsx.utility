@@ -14,15 +14,7 @@ vcap_service_config_file_name = 'vcap_service_config.json'
 
 logger = logging.getLogger('streamsx.test.rest_test')
 
-class CommonTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        """
-        Initialize the logger and get the SWS username, password, and REST URL.
-        :return: None
-        """
-        if cls is CommonTests:
-            raise unittest.SkipTest("Skipping base tests.")
+class CommonTests(object):
 
     def test_ensure_correct_rest_module(self):
         self.logger.debug("Beginning test: test_ensure_correct_rest_module.")
