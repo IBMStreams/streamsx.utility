@@ -51,12 +51,12 @@ class StreamsConnection:
 
         # Connect to Bluemix service using VCAP
         elif config:
-            vcap_services = VcapUtils.get_vcap_services(config)
-            self.credentials = VcapUtils.get_credentials(config, vcap_services)
+            vcap_services = _get_vcap_services(vcap_services=config.get(ConfigParams.VCAP_SERVICES))
+            self.credentials = _get_credentials(config[ConfigParams.SERVICE_NAME], vcap_services)
             self._analytics_service = True
 
             # Obtain the streams SWS REST URL
-            rest_api_url = VcapUtils.get_rest_api_url_from_creds(self.credentials)
+            rest_api_url = _get_rest_api_url_from_creds(self.credentials)
 
             # Create rest connection to remote Bluemix SWS
             self.rest_client = StreamsRestClient(self.credentials['userid'], self.credentials['password'], rest_api_url)
@@ -171,95 +171,80 @@ class StreamsConnection:
         return pformat(self.__dict__)
 
 
-class VcapUtils(object):
-    """Contains convenience methods for retrieving the VCAP Services, credentials, and REST API URL from a provided
-    `config` dictionary.
+def _get_vcap_services(vcap_services = None):
+    """Retrieves the VCAP Services information from the `ConfigParams.VCAP_SERVICES` field in the config object. If
+    the field is a string, it attempts to parse it as a dict. If the field is a file, it reads the file and attempts
+    to parse the contents as a dict.
+
+    :param config: Connection information for Bluemix.
+    :type config: dict.
+    :return: A dict representation of the VCAP Services information.
+    :type return: dict.
     """
-    @staticmethod
-    def get_vcap_services(config):
-        """Retrieves the VCAP Services information from the `ConfigParams.VCAP_SERVICES` field in the config object. If
-        the field is a string, it attempts to parse it as a dict. If the field is a file, it reads the file and attempts
-        to parse the contents as a dict.
-
-        :param config: Connection information for Bluemix.
-        :type config: dict.
-        :return: A dict representation of the VCAP Services information.
-        :type return: dict.
-        """
-        # Attempt to retrieve from config
+    if vcap_services is None:
         try:
-            vs = config[ConfigParams.VCAP_SERVICES]
+            vcap_services = os.environ['VCAP_SERVICES']
         except KeyError:
-            # If that fails, try to get it from the environment
-            try:
-                vs = os.environ['VCAP_SERVICES']
-            except KeyError:
-                raise ValueError(
-                    "VCAP_SERVICES information must be supplied in config[ConfigParams.VCAP_SERVICES] or as environment variable 'VCAP_SERVICES'")
+            raise ValueError(
+                "VCAP_SERVICES information must be supplied as a parameter or as environment variable 'VCAP_SERVICES'")
 
-        # If it was passed to config as a dict, simply return it
-        if isinstance(vs, dict):
-            return vs
+    # If it was passed to config as a dict, simply return it
+    if isinstance(vcap_services, dict):
+        return vcap_services
+    try:
+        # Otherwise, if it's a string, try to load it as json
+        vcap_services = json.loads(vcap_services)
+    except json.JSONDecodeError:
+        # If that doesn't work, attempt to open it as a file path to the json config.
         try:
-            # Otherwise, if it's a string, try to load it as json
-            vs = json.loads(vs)
-        except json.JSONDecodeError:
-            # If that doesn't work, attempt to open it as a file path to the json config.
-            try:
-                with open(vs) as vcap_json_data:
-                    vs = json.load(vcap_json_data)
-            except:
-                raise ValueError("VCAP_SERVICES information is not JSON or a file containing JSON:", vs)
-        return vs
-
-    @staticmethod
-    def get_credentials(config, vcap_services):
-        """Retrieves the credentials of the VCAP Service specified by the `ConfigParams.SERVICE_NAME` field in `config`.
-
-        :param config: Connection information for Bluemix.
-        :type config: dict.
-        :param vcap_services: A dict representation of the VCAP Services information.
-        :type vcap_services: dict.
-        :return: A dict representation of the credentials.
-        :type return: dict.
-        """
-        # Get the credentials for the selected service, from VCAP_SERVICES config param
-        try:
-            service_name = config[ConfigParams.SERVICE_NAME]
-        except KeyError:
-            raise ValueError("Service name was not supplied in config[ConfigParams.SERVICE_NAME.")
-
-        # Get the service corresponding to the SERVICE_NAME
-        services = vcap_services['streaming-analytics']
-        creds = None
-        for service in services:
-            if service['name'] == service_name:
-                creds = service['credentials']
-                break
-
-        # If no corresponding service is found, error
-        if creds is None:
-            raise ValueError("Streaming Analytics service " + service_name + " was not found in VCAP_SERVICES")
-        return creds
-
-    @staticmethod
-    def get_rest_api_url_from_creds(credentials):
-        """Retrieves the Streams REST API URL from the provided credentials.
-
-        :param credentials: A dict representation of the credentials.
-        :type credentials: dict.
-        :return: The remote Streams REST API URL.
-        :type return: str.
-        """
-        resources_url = credentials['rest_url'] + credentials['resources_path']
-        try:
-            response = requests.get(resources_url, auth=(credentials['userid'], credentials['password'])).json()
+            with open(vcap_services) as vcap_json_data:
+                vcap_services = json.load(vcap_json_data)
         except:
-            logger.exception("Error while retrieving SWS REST url from: " + resources_url)
-            raise
+            raise ValueError("VCAP_SERVICES information is not JSON or a file containing JSON:", vcap_services)
+    return vcap_services
 
-        rest_api_url = response['streams_rest_url'] + '/resources'
-        return rest_api_url
+
+def _get_credentials(service_name, vcap_services):
+    """Retrieves the credentials of the VCAP Service specified by the `ConfigParams.SERVICE_NAME` field in `config`.
+
+    :param config: Connection information for Bluemix.
+    :type config: dict.
+    :param vcap_services: A dict representation of the VCAP Services information.
+    :type vcap_services: dict.
+    :return: A dict representation of the credentials.
+    :type return: dict.
+    """
+    # Get the service corresponding to the SERVICE_NAME
+    services = vcap_services['streaming-analytics']
+    creds = None
+    for service in services:
+        if service['name'] == service_name:
+            creds = service['credentials']
+            break
+
+    # If no corresponding service is found, error
+    if creds is None:
+        raise ValueError("Streaming Analytics service " + str(service_name) + " was not found in VCAP_SERVICES")
+    return creds
+
+
+def _get_rest_api_url_from_creds(credentials):
+    """Retrieves the Streams REST API URL from the provided credentials.
+
+    :param credentials: A dict representation of the credentials.
+    :type credentials: dict.
+    :return: The remote Streams REST API URL.
+    :type return: str.
+    """
+    resources_url = credentials['rest_url'] + credentials['resources_path']
+    try:
+        response = requests.get(resources_url, auth=(credentials['userid'], credentials['password'])).json()
+    except:
+        logger.exception("Error while retrieving SWS REST url from: " + resources_url)
+        raise
+
+    rest_api_url = response['streams_rest_url'] + '/resources'
+    return rest_api_url
 
 
 class ConfigParams(object):
