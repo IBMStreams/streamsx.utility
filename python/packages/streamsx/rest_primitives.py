@@ -436,7 +436,7 @@ class StreamingAnalyticsService(object):
     def _get_url(self, req_name):
         return self._credentials['rest_url'] + self._credentials[req_name]
 
-    def cancel_job(self, job_id=None, job_name=None, ):
+    def cancel_job(self, job_id=None, job_name=None):
         """Cancel a running job.
 
         Args:
@@ -454,4 +454,21 @@ class StreamingAnalyticsService(object):
 
         jobs_url = self._get_url('jobs_path')
         return self.rest_client.session.delete(jobs_url, params=payload).json()
-
+    def start_instance(self):
+        """
+        Start the instance for this Streaming Analytics service.
+        """
+        start_url = self._get_url('start_path')
+        return self.rest_client.session.put(start_url, json={}).json()
+    def stop_instance(self):
+        """
+        Stop the instance for this Streaming Analytics service.
+        """
+        stop_url = self._get_url('stop_path')
+        return self.rest_client.session.put(stop_url, json={}).json()
+    def get_instance_status(self):
+        """
+        Get the status the instance for this Streaming Analytics service.
+        """
+        status_url = self._get_url('status_path')
+        return self.rest_client.session.get(status_url).json()
