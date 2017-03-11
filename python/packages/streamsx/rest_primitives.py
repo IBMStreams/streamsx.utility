@@ -105,9 +105,10 @@ class StreamsRestClient(object):
 class ViewThread(threading.Thread):
     """A thread which, when invoked, begins fetching data from the supplied view and populates the `View.items` queue.
     """
-    def __init__(self, view):
+    def __init__(self, view, tuple_getter):
         super(ViewThread, self).__init__()
         self.view = view
+        self.tuple_getter = tuple_getter
         self.stop = threading.Event()
         self.items = queue.Queue()
 
@@ -142,9 +143,9 @@ class ViewThread(threading.Thread):
                     continue
 
                 # If we haven't seen it, continue
-                data.append(json.loads(item.data[data_name]))
+                data.append(self.tuple_getter(item))
             else:
-                data.append(json.loads(item.data[data_name]))
+                data.append(self.tuple_getter(item))
 
         if len(items) > 0:
             # Record the current millisecond time boundary.
@@ -163,6 +164,12 @@ class ViewThread(threading.Thread):
     def _stopped(self):
         return self.stop.isSet()
 
+def _get_json_tuple(item):
+    """
+    Get a tuple from a view with a schema
+    tuple<rstring jsonString>
+    """
+    return json.loads(item.data['jsonString']))
 
 class View(_ResourceElement):
     """The view element resource provides access to information about a view that is associated with an active job, and
@@ -170,7 +177,7 @@ class View(_ResourceElement):
     """
     def __init__(self, json_view, rest_client):
         super(View, self).__init__(json_view, rest_client)
-        self.view_thread = ViewThread(self)
+        self.view_thread = ViewThread(self, _get_json_tuple)
 
     def get_domain(self):
         return Domain(self.rest_client.make_request(self.domain), self.rest_client)
