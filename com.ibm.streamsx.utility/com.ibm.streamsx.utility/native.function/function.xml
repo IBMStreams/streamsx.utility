@@ -41,8 +41,7 @@
         <cmn:description>Utility Functions</cmn:description>
         <cmn:managedLibrary>
           <cmn:lib>utility</cmn:lib>
-          <cmn:libPath>../../impl/lib</cmn:libPath>
-          <cmn:includePath>./</cmn:includePath>
+          <cmn:command>../../impl/bin/archLevel</cmn:command>
         </cmn:managedLibrary>
       </library>
     </dependencies>
