@@ -35,6 +35,7 @@ clean:
 	rm -f $(OBJECTS) $(LIBPATH)/$(TARGET) $(LIBPATH)/$(SO_NAME)
 
 $(LIBPATH)/$(TARGET) : $(OBJECTS)
+	mkdir -p $(LIBPATH)
 	$(CC) -fPIC $(CFLAGS) $(SPL_INCLUDE_OPTIONS) $(OBJECTS) -o $@ $(LDFLAGS)
 	ln -f -s $(TARGET) $(LIBPATH)/$(SO_NAME)
 
