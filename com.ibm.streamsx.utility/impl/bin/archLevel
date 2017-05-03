@@ -62,7 +62,7 @@ elif [ "$1" == "includePath" ]; then
 
 elif [ "$1" == "lib" ]; then
   # echo any computed library names here, if needed
-  echo dgaFeatures 
+  echo utility 
 
 else
   echo "unsupported option"
