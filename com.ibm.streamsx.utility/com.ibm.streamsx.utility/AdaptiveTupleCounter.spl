@@ -15,12 +15,48 @@ use com.ibm.streamsx.utility::* ;
  * @param targetInterval  The desired target tracing interval (in seconds).
  *                        Traces will occur with at-most this frequency.
  *                        A value of 0 means to not trace at all (the default).
+ * @param maxCheckInterval  Internally, this operator uses targetInterval and
+ *                        a dynamic estimate of expected tuple throughput to
+ *                        compute a check interval, measured as tuples received
+ *                        since the last check, that the operator will wait before
+ *                        doing anything expensive, like checking the TOD (to
+ *                        determine if the given targetInterval has expired since
+ *                        the most recent output trace).  However, if the tuple
+ *                        throughput varies widely, in particular if it has extended
+ *                        periods of time of extremely low tuple rate, and then
+ *                        periodic (and relatively short) burts of traffic, much
+ *                        much higher, the internally computed check interval may
+ *                        become very large, if computed during a burst of high
+ *                        throughput, and when the extended period of low throughput
+ *                        occurs, this operator will incorrectly wait a very long time
+ *                        (potentially much much longer than the targetInterval) between
+ *                        TOD checks, and thus trace output.
+ *                        Setting MaxCheckInterval to a non-zero value sets the maximum
+ *                        number of tuples to wait between TOD checks, which can often
+ *                        better handle these wildly variable throughput streams.
+ *                        Setting this too low, however, can cause TOD checks too
+ *                        frequently, causing excessive additional tuple latency and
+ *                        hurting throughput.
+ *                        The default value (0) disables this maximum, allowing the
+ *                        internal check interval to vary freely.  This is optimal
+ *                        for fairly steady throughput streams, with only gradual
+ *                        throughput changes (over timeperiods larger than the
+ *                        targetInterval).
  *
  * The AdaptiveTupleCounterTargetInterval submission-time parameter can be used
  * to control the target interval for all instances of the AdaptiveTupleCounter
  * in the application, but if a given operator invocation sets the
  * targetInterval parameter explicitly, that value will take precedence over
  * the submission time value.
+ *
+ * The MaxCheckInterval submission-time parameter can be used to control the
+ * max check interval for all instances of the AdaptiveTupleCounter in the
+ * application, but will be overridden by the direct use of the maxCheckInterval
+ * parameter at the operator invocation point.  Be very careful of overriding
+ * these all to the same value, since most streams will likely be fairly steady,
+ * but of very different throughputs from other streams.  This may cause
+ * excessive additional tuple latency added to the AdaptiveTupleCounter() on
+ * some streams.
  *
  * To use the operator, simply attach an instance of this operator to the
  * desired stream.
@@ -46,6 +82,7 @@ public composite AdaptiveTupleCounter(input In)
 {
     param
         expression<int64> $targetInterval : (int64)getSubmissionTimeValue("AdaptiveTupleCounterTargetInterval", "0");  // Default is to disable tracing.
+        expression<uint64> $maxCheckInterval : (uint64)getSubmissionTimeValue("MaxCheckInterval", "0");  // Default is to disable capping.
 
     graph
         () as Counter = Custom(In)
@@ -96,6 +133,9 @@ public composite AdaptiveTupleCounter(input In)
                           currentCheckInterval = 9ul* (uint64)targetIntervalNs * tupleCount / (uint64)deltaTns / 8ul;
                           if(currentCheckInterval == 0ul) {
                               currentCheckInterval = 1ul;
+                          }
+                          if(($maxCheckInterval > 0ul) && (currentCheckInterval > $maxCheckInterval)) {
+                              currentCheckInterval = $maxCheckInterval;
                           }
                       } else {
                           // Hitting currentCheckInterval just slightly too quick.  Leave it as it is to avoid thrashing the interval targets.
