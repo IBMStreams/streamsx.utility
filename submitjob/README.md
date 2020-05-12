@@ -2,7 +2,7 @@ The submitjob.pl script submits the job given by the first argument with the par
 
 For example, you can do: 
 `streamtool submitjob output/Main.sab -P author=Homer -P title='The Iliad' year=-1194`
-but you might perfer to keep the submission time values in a file, `iliad.txt`:
+but you might prefer to keep the submission time values in a file, `iliad.txt`:
 ```
 author=Homer
 title=The Iliad
